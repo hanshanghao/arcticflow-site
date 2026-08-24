@@ -95,7 +95,7 @@ arcticflow-site/
 ├── sw.js                 Service worker (offline shell, installable PWA)
 ├── firestore.rules       Server-side role security for the app
 ├── firebase.json         Firebase CLI config — deploys firestore.rules
-├── .firebaserc           Pins the Firebase project (arcticflow-d730d)
+├── .firebaserc           Pins the Firebase project (arcticflow-21jsh)
 ├── .github/workflows/    Auto-deploys rules on push (see setup above)
 ├── images/               OG cover, favicons, PWA icons
 ├── tools/generate-images.py   Regenerates everything in images/

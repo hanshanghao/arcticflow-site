@@ -6,6 +6,8 @@ on:
     paths:
       - "firestore.rules"
       - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/deploy-firestore.yml"
   workflow_dispatch:
 
 concurrency:
@@ -35,4 +37,4 @@ jobs:
           fi
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          firebase deploy --only firestore:rules --project arcticflow-d730d --non-interactive --force
+          firebase deploy --only firestore:rules --project arcticflow-21jsh --non-interactive --force

@@ -41,12 +41,12 @@ import {
   ReCaptchaV3Provider
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDn-ASWo1UML5CR6pSysfJal9BOCdvJKao",
-  authDomain: "arcticflow-d730d.firebaseapp.com",
-  projectId: "arcticflow-d730d",
-  storageBucket: "arcticflow-d730d.firebasestorage.app",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyAEFsWgGz5bnN4TA2udn-giyWfdjB5ogxo",
+  authDomain: "arcticflow-21jsh.firebaseapp.com",
+  projectId: "arcticflow-21jsh",
+  storageBucket: "arcticflow-21jsh.firebasestorage.app",
+  messagingSenderId: "257399877694",
+  appId: "1:257399877694:web:3b0d99be25e5c82a4da16f"
 };
 
 const RECAPTCHA_SITE_KEY = "";
