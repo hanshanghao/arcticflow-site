@@ -247,6 +247,7 @@ function enterApp() {
   const rb = $("meRole");
   rb.textContent = isOffice() ? "Office staff" : "Technician";
   rb.className = "role-badge" + (isOffice() ? " office" : "");
+  $("exportDayBtn").hidden = !isOffice();
 
   const jobsQ = isOffice() ? collection(db, "jobs") : query(collection(db, "jobs"), where("assignedTo", "==", me.id));
   unsubs.push(onSnapshot(jobsQ, (snap) => {
@@ -364,6 +365,220 @@ function shiftDay(n) {
   d.setDate(d.getDate() + n);
   scheduleDate = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   renderSchedule();
+}
+
+$("exportDayBtn").addEventListener("click", exportDailyJobs);
+
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+let crcTableCache = null;
+function crc32(buf) {
+  if (!crcTableCache) {
+    const t = new Int32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c;
+    }
+    crcTableCache = t;
+  }
+  let c = -1;
+  for (let i = 0; i < buf.length; i++) c = crcTableCache[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ -1) >>> 0;
+}
+
+function zipStore(files) {
+  const te = new TextEncoder();
+  const parts = [];
+  const central = [];
+  let offset = 0;
+  const dosTime = 0;
+  const dosDate = ((2026 - 1980) << 9) | (1 << 5) | 1;
+  for (const f of files) {
+    const name = te.encode(f.name);
+    const data = f.data;
+    const crc = crc32(data);
+    const lh = new Uint8Array(30 + name.length);
+    const dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 0x0800, true);
+    dv.setUint16(8, 0, true);
+    dv.setUint16(10, dosTime, true);
+    dv.setUint16(12, dosDate, true);
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, data.length, true);
+    dv.setUint32(22, data.length, true);
+    dv.setUint16(26, name.length, true);
+    lh.set(name, 30);
+    parts.push(lh, data);
+    central.push({ name, crc, size: data.length, offset });
+    offset += lh.length + data.length;
+  }
+  let cdSize = 0;
+  const cdParts = central.map((c) => {
+    const ch = new Uint8Array(46 + c.name.length);
+    const dv = new DataView(ch.buffer);
+    dv.setUint32(0, 0x02014b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 20, true);
+    dv.setUint16(8, 0x0800, true);
+    dv.setUint16(10, 0, true);
+    dv.setUint16(12, dosTime, true);
+    dv.setUint16(14, dosDate, true);
+    dv.setUint32(16, c.crc, true);
+    dv.setUint32(20, c.size, true);
+    dv.setUint32(24, c.size, true);
+    dv.setUint16(28, c.name.length, true);
+    dv.setUint32(42, c.offset, true);
+    ch.set(c.name, 46);
+    cdSize += ch.length;
+    return ch;
+  });
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, central.length, true);
+  ev.setUint16(10, central.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, offset, true);
+  const all = [...parts, ...cdParts, eocd];
+  const out = new Uint8Array(all.reduce((s, a) => s + a.length, 0));
+  let p = 0;
+  for (const a of all) { out.set(a, p); p += a.length; }
+  return out;
+}
+
+const xColLetter = (i) => { let s = ""; i += 1; while (i) { s = String.fromCharCode(65 + ((i - 1) % 26)) + s; i = Math.floor((i - 1) / 26); } return s; };
+
+function xCell(ref, val, style) {
+  const s = style ? ` s="${style}"` : "";
+  if (typeof val === "number" && isFinite(val)) return `<c r="${ref}"${s}><v>${val}</v></c>`;
+  if (val === "" || val == null) return "";
+  return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${esc(val)}</t></is></c>`;
+}
+
+function buildXlsx(sheets) {
+  const enc = new TextEncoder();
+  const sheetXmls = sheets.map((sh) => {
+    const rows = sh.rows
+      .map((row, ri) => `<row r="${ri + 1}">` + row.map((v, ci) => xCell(xColLetter(ci) + (ri + 1), v, sh.styleRows && sh.styleRows.includes(ri) ? 1 : 0)).join("") + `</row>`)
+      .join("");
+    const cols = (sh.widths || []).length
+      ? `<cols>${sh.widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>`
+      : "";
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${cols}<sheetData>${rows}</sheetData></worksheet>`;
+  });
+  const ct =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+    `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+    `<Default Extension="xml" ContentType="application/xml"/>` +
+    `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
+    `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>` +
+    sheetXmls.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("") +
+    `</Types>`;
+  const rootRels =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+    `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>` +
+    `</Relationships>`;
+  const wb =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>` +
+    sheets.map((sh, i) => `<sheet name="${esc(String(sh.name).slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("") +
+    `</sheets></workbook>`;
+  const wbRels =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+    sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("") +
+    `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
+    `</Relationships>`;
+  const styles =
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+    `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF03101F"/><name val="Calibri"/></font></fonts>` +
+    `<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD7E7FA"/></patternFill></fill></fills>` +
+    `<borders count="1"><border/></borders>` +
+    `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
+    `<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>` +
+    `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>` +
+    `</styleSheet>`;
+  const files = [
+    ["[Content_Types].xml", ct],
+    ["_rels/.rels", rootRels],
+    ["xl/workbook.xml", wb],
+    ["xl/_rels/workbook.xml.rels", wbRels],
+    ["xl/styles.xml", styles],
+    ...sheetXmls.map((x, i) => [`xl/worksheets/sheet${i + 1}.xml`, x])
+  ];
+  return zipStore(files.map(([name, s]) => ({ name, data: enc.encode(s) })));
+}
+
+function downloadBlob(name, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+function exportDailyJobs() {
+  if (!isOffice()) return;
+  const dayJobs = jobs.filter((j) => j.date === scheduleDate);
+  if (!dayJobs.length) {
+    toast("No jobs booked for " + fmtLongDate(scheduleDate) + " — nothing to export.", true);
+    return;
+  }
+  const jobRows = [[
+    "Time", "Status", "Job", "Customer", "Phone", "Site address", "Technician",
+    "Assigned by", "Services", "Extra charges", "Subtotal ($)", "Discount ($)", "Total ($)",
+    "Payment", "Invoice #", "Notes"
+  ]];
+  let dayTotal = 0;
+  dayJobs.forEach((j) => {
+    const t = totalsFor(j);
+    dayTotal += t.total;
+    jobRows.push([
+      j.time || "",
+      STATUS_LABEL[j.status] || j.status || "",
+      j.title || "",
+      (j.customer && j.customer.name) || "",
+      (j.customer && j.customer.phone) || "",
+      (j.customer && j.customer.address) || "",
+      techLabel(j),
+      j.assignedByName || "",
+      (j.services || []).map((x) => `${x.desc}: ${money(x.amount)}`).join("\n"),
+      ((j.extras && j.extras.length) ? j.extras : []).map((x) => `${x.desc}: ${money(x.amount)}`).join("\n"),
+      round2(t.subtotal),
+      round2(t.discount),
+      round2(t.total),
+      j.payment && j.payment.paid ? "Paid · " + (METHOD_LABEL[j.payment.method] || "") : "Unpaid",
+      (j.invoice && j.invoice.number) || "",
+      j.notes || ""
+    ]);
+  });
+  jobRows.push(["", "", "", "", "", "", "", "", "Day total (" + dayJobs.length + " job" + (dayJobs.length === 1 ? "" : "s") + ")", "", "", "", round2(dayTotal), "", ""]);
+
+  const lineRows = [["Job date", "Time", "Job", "Customer", "Type", "Description", "Amount ($)", "Added by"]];
+  dayJobs.forEach((j) => {
+    const cust = (j.customer && j.customer.name) || "";
+    (j.services || []).forEach((x) => lineRows.push([j.date, j.time || "", j.title, cust, "Service", x.desc, round2(Number(x.amount) || 0), x.addedByName || j.assignedByName || ""]));
+    ((j.extras && j.extras.length) ? j.extras : []).forEach((x) => lineRows.push([j.date, j.time || "", j.title, cust, "Extra", x.desc, round2(Number(x.amount) || 0), x.addedByName || ""]));
+  });
+
+  const bytes = buildXlsx([
+    { name: "Jobs " + scheduleDate, rows: jobRows, widths: [8, 12, 26, 22, 15, 34, 17, 16, 36, 36, 12, 12, 12, 22, 11, 40], styleRows: [0] },
+    { name: "Line items", rows: lineRows, widths: [12, 8, 26, 22, 9, 34, 12, 17], styleRows: [0] }
+  ]);
+  downloadBlob(
+    "arcticflow-jobs-" + scheduleDate + ".xlsx",
+    new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+  );
+  toast(`Exported ${dayJobs.length} job${dayJobs.length === 1 ? "" : "s"} for ${fmtLongDate(scheduleDate)} as Excel.`);
 }
 
 function renderAllJobs() {
