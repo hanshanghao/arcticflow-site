@@ -247,8 +247,7 @@ function enterApp() {
   const rb = $("meRole");
   rb.textContent = isOffice() ? "Office staff" : "Technician";
   rb.className = "role-badge" + (isOffice() ? " office" : "");
-  const exportBtn = $("exportDayBtn");
-  if (exportBtn) exportBtn.hidden = !isOffice();
+  ensureExportButton();
 
   const jobsQ = isOffice() ? collection(db, "jobs") : query(collection(db, "jobs"), where("assignedTo", "==", me.id));
   unsubs.push(onSnapshot(jobsQ, (snap) => {
@@ -368,8 +367,29 @@ function shiftDay(n) {
   renderSchedule();
 }
 
-const exportDayBtn = $("exportDayBtn");
-if (exportDayBtn) exportDayBtn.addEventListener("click", exportDailyJobs);
+function ensureExportButton() {
+  let btn = $("exportDayBtn");
+  if (!isOffice()) {
+    if (btn) btn.hidden = true;
+    return;
+  }
+  if (!btn) {
+    const host = document.querySelector("#view-schedule .head-actions");
+    if (!host) return;
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "exportDayBtn";
+    btn.className = "btn btn-ghost btn-sm";
+    btn.title = "Export this day's jobs as an Excel spreadsheet";
+    btn.textContent = "⬇ Export day";
+    host.insertBefore(btn, $("newJobBtn"));
+  }
+  btn.hidden = false;
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#exportDayBtn")) exportDailyJobs();
+});
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -1190,6 +1210,12 @@ window.addEventListener("online", () => toast("Back online — syncing your data
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      location.reload();
+    });
     navigator.serviceWorker.register("sw.js").catch(() => {});
   });
 }
