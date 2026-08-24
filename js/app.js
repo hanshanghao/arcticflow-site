@@ -283,7 +283,7 @@ $("tabs").addEventListener("click", (e) => {
 
 function switchView(id) {
   activeView = id;
-  document.querySelectorAll(".view").forEach((v) => { v.hidden = true; });
+  document.querySelectorAll(".view").forEach((v) => { v.hidden = v.id !== "view-" + id; });
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === id));
   renderActiveView();
 }
