@@ -1056,12 +1056,14 @@ function paymentModal(job) {
     </form>`);
   $("payForm").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const completing = job.status !== "completed" && job.status !== "cancelled";
     try {
       await updateDoc(doc(db, "jobs", job.id), {
         payment: { method: e.target.method.value, paid: true, paidAt: Date.now() },
+        status: completing ? "completed" : job.status,
         updatedAt: Date.now()
       });
-      toast("Payment recorded.");
+      toast(completing ? "Payment recorded — job marked Completed." : "Payment recorded.");
       closeModal();
       openJobDetail(job.id);
     } catch (err) { toast(authError(err.code), true); }
