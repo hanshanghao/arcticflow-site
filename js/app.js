@@ -647,12 +647,30 @@ function renderTeam() {
         </div>
         <span class="tag ${u.isAdmin ? "office" : "tech"}">${u.isAdmin ? "Master admin" : u.role === "office" ? "Office staff" : "Technician"}</span>
         <span class="tag ${u.active === false ? "inactive" : ""}">${u.active === false ? "Deactivated" : "Active"}</span>
+        ${me.isAdmin && u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-switch-role="${u.id}">${u.role === "office" ? "Make technician" : "Make office staff"}</button>` : ""}
         ${u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn ${u.active === false ? "btn-primary" : "btn-danger"} btn-sm" data-toggle-user="${u.id}">${u.active === false ? "Activate" : "Deactivate"}</button>` : ""}
       </div>`).join("")
     : `<div class="empty">No team members yet.</div>`;
 }
 
 $("teamList").addEventListener("click", async (e) => {
+  const roleBtn = e.target.closest("[data-switch-role]");
+  if (roleBtn) {
+    const target = users[roleBtn.dataset.switchRole];
+    if (!target) return;
+    if (!me.isAdmin) return toast("Only the master admin can change account types.", true);
+    const toOffice = target.role !== "office";
+    if (!confirm(`Change ${target.name}'s account type to ${toOffice ? "Office staff" : "Technician"}?\nTheir jobs and history stay untouched.`)) return;
+    roleBtn.disabled = true;
+    try {
+      await updateDoc(doc(db, "users", target.id), { role: toOffice ? "office" : "tech" });
+      toast(target.name + " is now " + (toOffice ? "office staff" : "a technician") + ".");
+    } catch (err) {
+      toast(authError(err.code), true);
+    }
+    roleBtn.disabled = false;
+    return;
+  }
   const btn = e.target.closest("[data-toggle-user]");
   if (!btn) return;
   const target = users[btn.dataset.toggleUser];
@@ -732,7 +750,7 @@ $("newJobBtn2").addEventListener("click", () => openJobForm());
 
 function openJobForm(job) {
   if (!isOffice()) return;
-  const techs = Object.values(users).filter((u) => !u.isAdmin && u.active !== false);
+  const techs = Object.values(users).filter((u) => !u.isAdmin && u.active !== false && u.role !== "office");
   const s = job || {};
   const svc = (s.services && s.services[0]) || { desc: "", amount: "" };
   openModal(`
