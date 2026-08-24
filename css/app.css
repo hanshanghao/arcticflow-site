@@ -128,6 +128,7 @@ h1,h2,h3{font-family:'Sora','Inter',sans-serif}
 .pill.amber{background:rgba(251,191,36,.14);color:var(--amber)}
 .pill.green{background:rgba(52,211,153,.14);color:var(--green)}
 .pill.rose{background:rgba(251,113,133,.14);color:var(--rose)}
+.pill.violet{background:rgba(139,92,246,.16);color:#a78bfa}
 .pill.gray{background:rgba(148,197,255,.1);color:var(--muted)}
 .job-total{font-size:.82rem;color:var(--green);font-weight:600}
 
@@ -192,6 +193,9 @@ h1,h2,h3{font-family:'Sora','Inter',sans-serif}
 .seg.active-scheduled{background:rgba(59,130,246,.2);color:#93c5fd;border-color:rgba(59,130,246,.5)}
 .seg.active-in_progress{background:rgba(251,191,36,.18);color:var(--amber);border-color:rgba(251,191,36,.5)}
 .seg.active-completed{background:rgba(52,211,153,.16);color:var(--green);border-color:rgba(52,211,153,.5)}
+.seg.active-cancelled{background:rgba(251,113,133,.16);color:var(--rose);border-color:rgba(251,113,133,.5)}
+.seg.active-postponed{background:rgba(148,197,255,.12);color:var(--muted);border-color:var(--border-bright)}
+.seg.active-rescheduled{background:rgba(139,92,246,.18);color:#a78bfa;border-color:rgba(139,92,246,.55)}
 
 .toast-wrap{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;width:max-content;max-width:92vw}
 .toast{background:#0c2036;border:1px solid var(--border-bright);color:var(--text);font-size:.88rem;padding:12px 18px;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);animation:toastIn .25s ease}
@@ -278,9 +282,13 @@ h1,h2,h3{font-family:'Sora','Inter',sans-serif}
   .toast.err{border-color:rgba(190,18,60,.5);color:#9f1239}
   .pill.blue{color:#1d4ed8;background:rgba(37,99,235,.12)}
   .pill.gray{color:var(--muted);background:rgba(12,52,96,.08)}
+  .pill.violet{color:#6d28d9;background:rgba(109,40,217,.1)}
   .seg.active-scheduled{color:#1d4ed8;background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.45)}
   .seg.active-in_progress{color:var(--amber);background:rgba(180,83,9,.12);border-color:rgba(180,83,9,.4)}
   .seg.active-completed{color:var(--green);background:rgba(4,120,87,.12);border-color:rgba(4,120,87,.4)}
+  .seg.active-cancelled{color:#be123c;background:rgba(190,18,60,.1);border-color:rgba(190,18,60,.4)}
+  .seg.active-postponed{color:#485d7d;background:rgba(12,52,96,.08);border-color:rgba(3,105,161,.5)}
+  .seg.active-rescheduled{color:#6d28d9;background:rgba(109,40,217,.1);border-color:rgba(109,40,217,.4)}
   .line-item small{color:rgba(72,93,125,.85)}
   .tag{background:rgba(12,52,96,.08)}
   .tag.tech{color:#1d4ed8;background:rgba(37,99,235,.1)}

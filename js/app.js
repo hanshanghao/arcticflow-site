@@ -60,8 +60,8 @@ const fmtDate = (iso) => { if (!iso) return "—"; const d = new Date(iso + "T00
 const fmtLongDate = (iso) => iso ? new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "—";
 const fmtDateTime = (ts) => ts ? new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
 
-const STATUS_LABEL = { scheduled: "Scheduled", in_progress: "In progress", completed: "Completed" };
-const STATUS_PILL = { scheduled: "blue", in_progress: "amber", completed: "green" };
+const STATUS_LABEL = { scheduled: "Scheduled", in_progress: "In progress", completed: "Completed", cancelled: "Cancelled", postponed: "Postponed", rescheduled: "Rescheduled" };
+const STATUS_PILL = { scheduled: "blue", in_progress: "amber", completed: "green", cancelled: "rose", postponed: "gray", rescheduled: "violet" };
 const METHOD_LABEL = { card: "Card (online)", cash: "Cash", bank: "Bank transfer", wallet: "Digital wallet" };
 
 let app, auth, db, secondaryApp, secondaryAuth;
@@ -620,9 +620,9 @@ $("statusFilters").addEventListener("click", (e) => {
 function renderMyJobs() {
   const today = todayStr();
   const groups = [
-    ["Today", jobs.filter((j) => j.date === today)],
-    ["Upcoming", jobs.filter((j) => j.date > today)],
-    ["Completed & past", jobs.filter((j) => j.status === "completed" || j.date < today)]
+    ["Today", jobs.filter((j) => j.date === today && j.status !== "cancelled")],
+    ["Upcoming", jobs.filter((j) => j.date > today && j.status !== "cancelled")],
+    ["Completed & past", jobs.filter((j) => j.status === "completed" || j.status === "cancelled" || j.date < today)]
   ];
   const open = groups[0][1].length + groups[1][1].length;
   $("myJobsCount").textContent = open + " open job" + (open === 1 ? "" : "s") + " assigned to you";
@@ -892,6 +892,7 @@ function openJobDetail(id) {
 
     <div class="status-flow">
       ${statusFlow.map((s) => `<button type="button" class="seg ${job.status === s ? "active-" + s : ""}" data-status-set="${s}">${STATUS_LABEL[s]}</button>`).join("")}
+      ${office ? ["cancelled", "postponed", "rescheduled"].map((s) => `<button type="button" class="seg ${job.status === s ? "active-" + s : ""}" data-status-set="${s}">${job.status === s ? "✓ " : ""}${s === "cancelled" ? "Cancel" : s[0].toUpperCase() + s.slice(1)}</button>`).join("") : ""}
     </div>
 
     <div class="action-row">
