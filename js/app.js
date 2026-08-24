@@ -86,10 +86,14 @@ function toast(msg, isErr) {
 
 function openModal(html) {
   $("modalBox").innerHTML = html;
-  $("modalBackdrop").hidden = false;
+  const bd = $("modalBackdrop");
+  bd.hidden = false;
+  bd.style.display = "grid";
 }
 function closeModal() {
-  $("modalBackdrop").hidden = true;
+  const bd = $("modalBackdrop");
+  bd.hidden = true;
+  bd.style.display = "none";
   $("modalBox").innerHTML = "";
 }
 $("modalBackdrop").addEventListener("click", (e) => { if (e.target === $("modalBackdrop")) closeModal(); });
