@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Arctic Flow — Field App</title>
+<meta name="description" content="Arctic Flow field app: schedules, job details, extra charges, digital invoicing and payments for AC contractor teams.">
+<meta name="theme-color" content="#040b16">
+<link rel="icon" href="images/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<div id="setupBanner" class="setup-banner" hidden>
+  <div>
+    <strong>Firebase is not configured yet.</strong>
+    <p>Open <code>js/app.js</code> and paste your Firebase project keys into <code>FIREBASE_CONFIG</code>. Steps are in <a href="README.md" target="_blank">README.md</a>.</p>
+  </div>
+</div>
+
+<section id="authScreen" class="auth-screen">
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div><div class="orb orb-2"></div>
+  </div>
+  <div class="auth-card">
+    <a class="brand auth-brand" href="index.html" aria-label="Arctic Flow home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#03101f" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M4 6l16 12M20 6L4 18"/></svg>
+      </span>
+      <span class="brand-name">Arctic<em>Flow</em></span>
+    </a>
+
+    <div id="authLoading" class="auth-loading"><span class="spinner"></span>Connecting…</div>
+
+    <form id="loginForm" class="auth-form" hidden autocomplete="on">
+      <h1>Welcome back</h1>
+      <p class="auth-sub">Sign in with the account created by your office admin.</p>
+      <label>Email
+        <input type="email" name="email" required autocomplete="email" placeholder="you@company.com">
+      </label>
+      <label>Password
+        <input type="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+      </label>
+      <p id="loginError" class="form-error" hidden></p>
+      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      <button type="button" id="forgotBtn" class="btn-link">Forgot password?</button>
+      <a class="btn-link" href="privacy.html" target="_blank">How your data is protected</a>
+    </form>
+
+    <form id="bootstrapForm" class="auth-form" hidden autocomplete="off">
+      <h1>Create master account</h1>
+      <p class="auth-sub">First run: this becomes your office master login. All staff logins are generated from here.</p>
+      <label>Your name
+        <input type="text" name="name" required placeholder="e.g. Alex Rivera">
+      </label>
+      <label>Master email
+        <input type="email" name="email" required autocomplete="email" placeholder="admin@company.com">
+      </label>
+      <label>Password
+        <input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Min 6 characters">
+      </label>
+      <p id="bootstrapError" class="form-error" hidden></p>
+      <button type="submit" class="btn btn-primary btn-block">Create master login</button>
+    </form>
+  </div>
+</section>
+
+<div id="appShell" hidden>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <a class="brand appbar-brand" href="index.html" aria-label="Arctic Flow home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#03101f" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M4 6l16 12M20 6L4 18"/></svg>
+        </span>
+        <span class="brand-name">Arctic<em>Flow</em></span>
+      </a>
+      <div class="user-chip">
+        <div class="avatar sm" id="meAvatar">··</div>
+        <div class="user-meta">
+          <strong id="meName">…</strong>
+          <span id="meRole" class="role-badge"></span>
+        </div>
+      </div>
+      <button type="button" id="logoutBtn" class="btn btn-ghost btn-sm">Sign out</button>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="App sections"></nav>
+  </header>
+
+  <main class="app-main">
+    <section id="view-schedule" class="view" hidden>
+      <div class="view-head">
+        <div>
+          <h2>Schedule</h2>
+          <p class="view-sub" id="scheduleCount"></p>
+        </div>
+        <div class="head-actions">
+          <button type="button" class="icon-btn" id="dayPrev" aria-label="Previous day">‹</button>
+          <input type="date" id="dayPicker" class="input input-date">
+          <button type="button" class="icon-btn" id="dayNext" aria-label="Next day">›</button>
+          <button type="button" class="btn btn-primary btn-sm" id="newJobBtn">+ New job</button>
+        </div>
+      </div>
+      <div id="scheduleList" class="job-list"></div>
+    </section>
+
+    <section id="view-alljobs" class="view" hidden>
+      <div class="view-head">
+        <div>
+          <h2>All jobs</h2>
+          <p class="view-sub" id="allJobsCount"></p>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="newJobBtn2">+ New job</button>
+      </div>
+      <div class="filter-row" id="statusFilters">
+        <button class="chip active" data-status="">All</button>
+        <button class="chip" data-status="scheduled">Scheduled</button>
+        <button class="chip" data-status="in_progress">In progress</button>
+        <button class="chip" data-status="completed">Completed</button>
+      </div>
+      <div id="allJobsList" class="job-list"></div>
+    </section>
+
+    <section id="view-myjobs" class="view" hidden>
+      <div class="view-head">
+        <div>
+          <h2>My jobs</h2>
+          <p class="view-sub" id="myJobsCount"></p>
+        </div>
+      </div>
+      <div id="myJobsList" class="job-list"></div>
+    </section>
+
+    <section id="view-team" class="view" hidden>
+      <div class="view-head">
+        <div>
+          <h2>Team &amp; logins</h2>
+          <p class="view-sub">Create and manage every staff account.</p>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="newUserBtn">+ New login</button>
+      </div>
+      <div id="teamList" class="team-list"></div>
+    </section>
+
+    <section id="view-invoices" class="view" hidden>
+      <div class="view-head">
+        <div>
+          <h2>Invoices</h2>
+          <p class="view-sub" id="invoiceStats"></p>
+        </div>
+      </div>
+      <div id="invoiceList" class="invoice-list"></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" id="modalBox"></div>
+</div>
+
+<div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

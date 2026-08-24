@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isOffice() {
+      return signedIn() && (myUser().role == 'office' || myUser().isAdmin == true);
+    }
+
+    function isActive() {
+      return signedIn() && myUser().active == true;
+    }
+
+    match /settings/public {
+      allow read: if true;
+      allow create: if !exists(/databases/$(database)/documents/settings/public);
+      allow update, delete: if isOffice();
+    }
+
+    function bootstrapEra() {
+      return !exists(/databases/$(database)/documents/settings/public)
+        || !get(/databases/$(database)/documents/settings/public).data.initialized;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if !signedIn() || isOffice()
+        || (request.auth.uid == uid && request.resource.data.isAdmin != true)
+        || (request.auth.uid == uid && bootstrapEra());
+      allow update, delete: if isOffice();
+    }
+
+    match /jobs/{jobId} {
+      allow read: if isOffice() || (isActive() && resource.data.assignedTo == request.auth.uid);
+
+      allow create: if isOffice();
+
+      allow update: if isOffice()
+        || (isActive()
+            && resource.data.assignedTo == request.auth.uid
+            && request.resource.data.assignedTo == resource.data.assignedTo
+            && request.resource.data.technicianName == resource.data.technicianName
+            && request.resource.data.assignedByName == resource.data.assignedByName);
+
+      allow delete: if isOffice();
+    }
+
+    match /counters/{docId} {
+      allow read, write: if signedIn();
+    }
+  }
+}

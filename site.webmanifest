@@ -1,0 +1,14 @@
+{
+  "name": "Arctic Flow",
+  "short_name": "ArcticFlow",
+  "description": "Smart scheduling, invoicing and payments for AC contractors.",
+  "start_url": "./app.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#040b16",
+  "theme_color": "#040b16",
+  "icons": [
+    { "src": "images/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
