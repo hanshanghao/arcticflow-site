@@ -647,6 +647,7 @@ function renderTeam() {
         </div>
         <span class="tag ${u.isAdmin ? "office" : "tech"}">${u.isAdmin ? "Master admin" : u.role === "office" ? "Office staff" : "Technician"}</span>
         <span class="tag ${u.active === false ? "inactive" : ""}">${u.active === false ? "Deactivated" : "Active"}</span>
+        ${me.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-user="${u.id}">Edit</button>` : ""}
         ${me.isAdmin && u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-switch-role="${u.id}">${u.role === "office" ? "Make technician" : "Make office staff"}</button>` : ""}
         ${u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn ${u.active === false ? "btn-primary" : "btn-danger"} btn-sm" data-toggle-user="${u.id}">${u.active === false ? "Activate" : "Deactivate"}</button>` : ""}
       </div>`).join("")
@@ -654,6 +655,14 @@ function renderTeam() {
 }
 
 $("teamList").addEventListener("click", async (e) => {
+  const editBtn = e.target.closest("[data-edit-user]");
+  if (editBtn) {
+    const target = users[editBtn.dataset.editUser];
+    if (!target) return;
+    if (!me.isAdmin) return toast("Only the master admin can edit accounts.", true);
+    openUserEditForm(target);
+    return;
+  }
   const roleBtn = e.target.closest("[data-switch-role]");
   if (roleBtn) {
     const target = users[roleBtn.dataset.switchRole];
@@ -712,6 +721,52 @@ function openUserForm() {
       </div>
     </form>`);
   $("userForm").addEventListener("submit", onCreateUser);
+}
+
+function openUserEditForm(u) {
+  const canRole = !u.isAdmin && u.id !== me.id;
+  const canActive = !u.isAdmin && u.id !== me.id;
+  openModal(`
+    <h3>Edit account</h3>
+    <p class="modal-sub">Changes apply instantly. The sign-in email is managed by Firebase and cannot be changed here — jobs and invoice history stay linked to this account.</p>
+    <form id="editUserForm">
+      <label>Full name<input name="name" required value="${esc(u.name)}" placeholder="e.g. Marcus Kane"></label>
+      <label>Sign-in email (read-only)<input value="${esc(u.email || "")}" disabled></label>
+      ${canRole ? `
+      <label>Account type
+        <select name="role">
+          <option value="tech" ${u.role !== "office" ? "selected" : ""}>Technician — limited view of own jobs</option>
+          <option value="office" ${u.role === "office" ? "selected" : ""}>Office staff — full schedule access</option>
+        </select>
+      </label>` : ""}
+      ${canActive ? `
+      <label style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" name="active" style="width:auto;margin-top:0" ${u.active !== false ? "checked" : ""}>
+        Login active
+      </label>` : ""}
+      <p id="editUserError" class="form-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save changes</button>
+      </div>
+    </form>`);
+  $("editUserForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    if (!f.name.value.trim()) return toast("Name cannot be empty.", true);
+    const patch = { name: f.name.value.trim() };
+    if (canRole) patch.role = f.role.value;
+    if (canActive) patch.active = f.active.checked;
+    try {
+      await updateDoc(doc(db, "users", u.id), patch);
+      toast("Account updated.");
+      closeModal();
+    } catch (err) {
+      const errEl = $("editUserError");
+      errEl.textContent = authError(err.code);
+      errEl.hidden = false;
+    }
+  });
 }
 
 async function onCreateUser(e) {
