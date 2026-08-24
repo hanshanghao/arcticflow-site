@@ -14,10 +14,25 @@ A real multi-device web app lives at `app.html`. Office staff get full schedule 
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project** (disable Analytics if you like).
 2. In the project: **Build → Authentication → Get started → Email/Password → Enable → Save**.
-3. **Build → Firestore Database → Create database → Start in production mode** (pick any region).
-4. Project overview → **</> (Web app)** → register app (no hosting needed) → copy the `firebaseConfig` values.
-5. Open `js/app.js`, replace the six `PASTE_...` placeholders in `FIREBASE_CONFIG` with your values.
-6. Firestore → **Rules** tab → paste the contents of `firestore.rules` from this folder → **Publish**.
+3. **Build → Firestore Database → Create database → Start in production mode** (pick any region). A fresh database ships with **deny-all rules** — publish this repo's rules next (see below).
+4. Project overview → **</> (Web app)** → register app (no hosting needed) → copy `appId` and `messagingSenderId` from the shown `firebaseConfig` into `js/app.js`. (`apiKey`, `authDomain`, `projectId` and `storageBucket` are already filled in.)
+
+### Getting the security rules live (required)
+
+`firestore.rules` only protects your data once it is published to Firebase. Two ways:
+
+**Option A — one-time manual (2 minutes):** Firestore → **Rules** tab → paste the contents of `firestore.rules` → **Publish**.
+
+**Option B — automatic on every push (recommended):** this repo ships with a GitHub Actions workflow (`.github/workflows/deploy-firestore.yml`) that deploys `firestore.rules` whenever it changes. One-time setup:
+
+1. Firebase Console → ⚙️ **Project settings → Service accounts → Generate new private key** (JSON file).
+2. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
+   - Name: `FIREBASE_SERVICE_ACCOUNT`
+   - Secret: paste the **entire JSON file contents**
+3. Push any change to `firestore.rules` (or run the workflow via its **Run workflow** button) — rules go live automatically.
+
+Until the rules are live, sign-in works but every data read/write fails with "permission denied" (production-mode default).
+
 7. Authentication → **Settings → Authorized domains** → add your deployed domain (e.g. `<you>.github.io` needs the bare domain, or `localhost` is already allowed).
 
 **Optional but recommended:** enable App Check so only your app can touch your database (**Build → App Check → Apps → reCAPTCHA v3**, get the site key). Then paste it into `RECAPTCHA_SITE_KEY` at the top of `js/app.js`. Until then the app runs without it.
@@ -79,13 +94,20 @@ arcticflow-site/
 ├── js/app.js             App logic — Firebase auth + Firestore realtime data
 ├── sw.js                 Service worker (offline shell, installable PWA)
 ├── firestore.rules       Server-side role security for the app
+├── firebase.json         Firebase CLI config — deploys firestore.rules
+├── .firebaserc           Pins the Firebase project (arcticflow-d730d)
+├── .github/workflows/    Auto-deploys rules on push (see setup above)
 ├── images/               OG cover, favicons, PWA icons
 ├── tools/generate-images.py   Regenerates everything in images/
 ├── robots.txt
 ├── sitemap.xml
 ├── site.webmanifest      PWA manifest (opens the app when installed)
-├── _headers              Security headers (Netlify/Cloudflare Pages)
-└── .nojekyll             Serves _headers verbatim on GitHub Pages
+├── _headers              Security headers (Netlify/Cloudflare Pages only)
+└── .nojekyll             Required so GitHub Pages serves dot/underscore files as-is
+
+Note: GitHub Pages cannot send custom HTTP headers, so `_headers` has no effect there.
+The `Referrer-Policy` equivalent is inlined as a <meta> tag on every page instead.
+Hosting on Netlify or Cloudflare Pages applies `_headers` automatically.
 ```
 
 ## Run locally

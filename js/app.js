@@ -44,7 +44,7 @@ const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDn-ASWo1UML5CR6pSysfJal9BOCdvJKao",
   authDomain: "arcticflow-d730d.firebaseapp.com",
   projectId: "arcticflow-d730d",
-  storageBucket: "",
+  storageBucket: "arcticflow-d730d.firebasestorage.app",
   messagingSenderId: "",
   appId: ""
 };
