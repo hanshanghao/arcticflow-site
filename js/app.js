@@ -859,7 +859,7 @@ function openJobDetail(id) {
       <div class="cust-line"><span>👤 <b>${esc((job.customer && job.customer.name) || "—")}</b></span></div>
       ${(job.customer && job.customer.phone) ? `<div class="cust-line">📞 <a href="tel:${esc(job.customer.phone)}">${esc(job.customer.phone)}</a></div>` : ""}
       ${(job.customer && job.customer.address) ? `<div class="cust-line">📍 ${esc(job.customer.address)}</div>` : ""}
-      <div class="cust-line"><a href="${esc(mapsUrl(job))}" target="_blank" rel="noopener">Open location in Maps →</a></div>
+      <div class="cust-line"><a href="${esc(mapsUrl(job))}" target="_blank" rel="noopener" data-maps-link>Open location in Maps →</a></div>
     </div>
 
     ${job.notes ? `<div class="card-box"><div class="box-title">Notes</div><p style="font-size:.88rem;color:var(--muted);line-height:1.55">${esc(job.notes)}</p></div>` : ""}
@@ -892,7 +892,7 @@ function openJobDetail(id) {
 
     <div class="status-flow">
       ${statusFlow.map((s) => `<button type="button" class="seg ${job.status === s ? "active-" + s : ""}" data-status-set="${s}">${STATUS_LABEL[s]}</button>`).join("")}
-      ${office ? ["cancelled", "postponed", "rescheduled"].map((s) => `<button type="button" class="seg ${job.status === s ? "active-" + s : ""}" data-status-set="${s}">${job.status === s ? "✓ " : ""}${s === "cancelled" ? "Cancel" : s[0].toUpperCase() + s.slice(1)}</button>`).join("") : ""}
+      ${["cancelled", "postponed", "rescheduled"].map((s) => `<button type="button" class="seg ${job.status === s ? "active-" + s : ""}" data-status-set="${s}">${job.status === s ? "✓ " : ""}${s === "cancelled" ? "Cancel" : s[0].toUpperCase() + s.slice(1)}</button>`).join("")}
     </div>
 
     <div class="action-row">
@@ -917,6 +917,11 @@ function openJobDetail(id) {
   on('[data-act="invoice"]', () => (job.invoice ? viewInvoice(job) : generateInvoice(job)));
   on('[data-act="edit-job"]', () => openJobForm(job));
   on('[data-act="delete-job"]', () => deleteJob(job));
+  on("[data-maps-link]", () => {
+    if (!isOffice() && ["scheduled", "postponed", "rescheduled"].includes(job.status)) {
+      markTechArrived(job);
+    }
+  });
   $("modalBox").querySelectorAll("[data-rm-line]").forEach((btn) => {
     btn.addEventListener("click", () => removeLine(job, btn.dataset.rmKind, btn.dataset.rmLine));
   });
@@ -933,6 +938,16 @@ async function setStatus(job, status) {
     await updateDoc(doc(db, "jobs", job.id), { status, updatedAt: Date.now() });
     toast("Status: " + STATUS_LABEL[status]);
     closeModal();
+  } catch (err) {
+    toast(authError(err.code), true);
+  }
+}
+
+async function markTechArrived(job) {
+  try {
+    await updateDoc(doc(db, "jobs", job.id), { status: "in_progress", updatedAt: Date.now() });
+    toast("On site — job marked In progress.");
+    openJobDetail(job.id);
   } catch (err) {
     toast(authError(err.code), true);
   }
