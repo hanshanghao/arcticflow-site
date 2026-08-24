@@ -221,9 +221,9 @@ h1,h2,h3{font-family:'Sora','Inter',sans-serif}
 #printArea{display:none}
 
 @media print{
-  body.printing > *{display:none !important}
-  body.printing #printArea{display:block !important;background:#fff;color:#0b1524;padding:0}
-  body.printing #printArea .invoice-sheet{background:#fff;color:#0b1524;border-radius:0;padding:0;box-shadow:none}
+  body > *:not(#printArea){display:none !important}
+  body > #printArea{display:block !important;background:#fff;color:#0b1524;padding:0}
+  body > #printArea .invoice-sheet{background:#fff;color:#0b1524;border-radius:0;padding:0;box-shadow:none}
   @page{margin:14mm}
 }
 

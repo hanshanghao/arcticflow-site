@@ -247,7 +247,8 @@ function enterApp() {
   const rb = $("meRole");
   rb.textContent = isOffice() ? "Office staff" : "Technician";
   rb.className = "role-badge" + (isOffice() ? " office" : "");
-  $("exportDayBtn").hidden = !isOffice();
+  const exportBtn = $("exportDayBtn");
+  if (exportBtn) exportBtn.hidden = !isOffice();
 
   const jobsQ = isOffice() ? collection(db, "jobs") : query(collection(db, "jobs"), where("assignedTo", "==", me.id));
   unsubs.push(onSnapshot(jobsQ, (snap) => {
@@ -367,7 +368,8 @@ function shiftDay(n) {
   renderSchedule();
 }
 
-$("exportDayBtn").addEventListener("click", exportDailyJobs);
+const exportDayBtn = $("exportDayBtn");
+if (exportDayBtn) exportDayBtn.addEventListener("click", exportDailyJobs);
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -1168,14 +1170,17 @@ function printInvoice(job) {
   host.id = "printArea";
   host.innerHTML = invoiceHTML(job);
   document.body.appendChild(host);
-  document.body.classList.add("printing");
+  let done = false;
   const cleanup = () => {
-    document.body.classList.remove("printing");
+    if (done) return;
+    done = true;
     window.removeEventListener("afterprint", cleanup);
+    clearTimeout(safety);
+    host.remove();
   };
+  const safety = setTimeout(cleanup, 120000);
   window.addEventListener("afterprint", cleanup);
   window.print();
-  setTimeout(cleanup, 1500);
 }
 
 init();
