@@ -32,46 +32,53 @@
   <div class="bg-orbs" aria-hidden="true">
     <div class="orb orb-1"></div><div class="orb orb-2"></div>
   </div>
-  <div class="auth-card">
-    <a class="brand auth-brand" href="index.html" aria-label="Arctic Flow home">
-      <span class="brand-mark" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#03101f" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M4 6l16 12M20 6L4 18"/></svg>
-      </span>
-      <span class="brand-name">Arctic<em>Flow</em></span>
-    </a>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <a class="brand auth-brand" href="index.html" aria-label="Arctic Flow home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#03101f" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M4 6l16 12M20 6L4 18"/></svg>
+        </span>
+        <span class="brand-name">Arctic<em>Flow</em></span>
+      </a>
 
-    <div id="authLoading" class="auth-loading"><span class="spinner"></span>Connecting…</div>
+      <noscript>
+        <p class="noscript-note">This app needs JavaScript enabled to sign in and sync data.</p>
+      </noscript>
 
-    <form id="loginForm" class="auth-form" hidden autocomplete="on">
-      <h1>Welcome back</h1>
-      <p class="auth-sub">Sign in with the account created by your office admin.</p>
-      <label>Email
-        <input type="email" name="email" required autocomplete="email" placeholder="you@company.com">
-      </label>
-      <label>Password
-        <input type="password" name="password" required autocomplete="current-password" placeholder="••••••••">
-      </label>
-      <p id="loginError" class="form-error" hidden></p>
-      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
-      <button type="button" id="forgotBtn" class="btn-link">Forgot password?</button>
-      <a class="btn-link" href="privacy.html" target="_blank">How your data is protected</a>
-    </form>
+      <form id="bootstrapForm" class="auth-form" autocomplete="off">
+        <h1>Create master account</h1>
+        <p class="auth-sub">First run: this becomes your office master login. All staff logins are generated from here.</p>
+        <label>Your name
+          <input type="text" name="name" required placeholder="e.g. Alex Rivera">
+        </label>
+        <label>Master email
+          <input type="email" name="email" required autocomplete="email" placeholder="admin@company.com">
+        </label>
+        <label>Password
+          <input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Min 6 characters">
+        </label>
+        <p id="bootstrapError" class="form-error" hidden></p>
+        <button type="submit" class="btn btn-primary btn-block">Create master login</button>
+      </form>
 
-    <form id="bootstrapForm" class="auth-form" hidden autocomplete="off">
-      <h1>Create master account</h1>
-      <p class="auth-sub">First run: this becomes your office master login. All staff logins are generated from here.</p>
-      <label>Your name
-        <input type="text" name="name" required placeholder="e.g. Alex Rivera">
-      </label>
-      <label>Master email
-        <input type="email" name="email" required autocomplete="email" placeholder="admin@company.com">
-      </label>
-      <label>Password
-        <input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Min 6 characters">
-      </label>
-      <p id="bootstrapError" class="form-error" hidden></p>
-      <button type="submit" class="btn btn-primary btn-block">Create master login</button>
-    </form>
+      <form id="loginForm" class="auth-form" hidden autocomplete="on">
+        <h1>Welcome back</h1>
+        <p class="auth-sub">Sign in with the account created by your office admin.</p>
+        <label>Email
+          <input type="email" name="email" required autocomplete="email" placeholder="you@company.com">
+        </label>
+        <label>Password
+          <input type="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+        </label>
+        <p id="loginError" class="form-error" hidden></p>
+        <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+        <button type="button" id="forgotBtn" class="btn-link">Forgot password?</button>
+        <a class="btn-link" href="privacy.html" target="_blank">How your data is protected</a>
+      </form>
+
+      <div id="authLoading" class="auth-status" role="status"><span class="spinner"></span>Connecting to secure cloud…</div>
+    </div>
+    <p class="auth-foot">Encrypted end-to-end · Powered by Firebase · <a href="privacy.html" target="_blank">Privacy</a></p>
   </div>
 </section>
 

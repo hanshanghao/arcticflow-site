@@ -112,7 +112,7 @@ async function init() {
   if (!configured) {
     $("setupBanner").hidden = false;
     $("authLoading").hidden = true;
-    $("loginForm").hidden = false;
+    $("loginForm").hidden = true;
     return;
   }
   try {
@@ -136,7 +136,8 @@ async function init() {
     const bootSnap = await getDoc(doc(db, "settings", "public")).catch(() => null);
     const bootstrapped = !!bootSnap && bootSnap.exists() && bootSnap.data().initialized === true;
     $("authLoading").hidden = true;
-    $(bootstrapped ? "loginForm" : "bootstrapForm").hidden = false;
+    $("loginForm").hidden = !bootstrapped;
+    $("bootstrapForm").hidden = bootstrapped;
 
     onAuthStateChanged(auth, async (user) => {
       unsubs.forEach((u) => u());
@@ -151,6 +152,7 @@ async function init() {
     });
   } catch (err) {
     $("authLoading").hidden = true;
+    $("bootstrapForm").hidden = false;
     toast("Firebase init failed: " + err.message, true);
   }
 }
