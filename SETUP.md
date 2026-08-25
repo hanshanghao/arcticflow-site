@@ -19,9 +19,9 @@ Arctic Flow uses [EmailJS](https://www.emailjs.com/) for sending automated email
 
 1. Create a free account at https://www.emailjs.com/
 2. **Email → Add Service** → select Gmail → connect your Gmail
-3. **Email → Templates** → create 3 templates using the HTML in `js/email-config.js`
+3. **Email → Templates** → create 2 templates (Welcome + Team Welcome) using HTML from `js/email-config.js`
 4. **Account → API Keys** → copy your **Public Key**
-5. Edit `js/email-config.js` and paste your credentials
+5. Edit `js/email-config.js` and paste your Public Key, Service ID, and Template IDs
 6. Deploy: `firebase deploy --only hosting`
 
 ### 2. PayPal Setup

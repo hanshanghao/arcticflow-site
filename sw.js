@@ -1,4 +1,4 @@
-const CACHE = "arcticflow-v19";
+const CACHE = "arcticflow-v20";
 const CORE = [
   "app.html",
   "index.html",

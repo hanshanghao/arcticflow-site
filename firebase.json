@@ -4,7 +4,6 @@
     "ignore": [
       "firebase.json",
       ".firebaserc",
-      "functions/**",
       "node_modules/**",
       ".git/**",
       "tools/**",
@@ -47,18 +46,5 @@
   },
   "firestore": {
     "rules": "firestore.rules"
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ]
-    }
-  ]
+  }
 }

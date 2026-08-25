@@ -120,7 +120,6 @@ function authError(code) {
 
 async function init() {
   if (!configured) {
-    $("setupBanner").hidden = false;
     $("authLoading").hidden = true;
     $("loginForm").hidden = true;
     return;
