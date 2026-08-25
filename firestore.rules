@@ -64,5 +64,20 @@ service cloud.firestore {
     match /counters/{docId} {
       allow read, write: if signedIn();
     }
+
+    match /subscriptions/{subId} {
+      allow read: if isMaster();
+      allow create: if true;
+      allow update: if isMaster();
+      allow delete: if false;
+    }
+
+    match /tokens/{tokenId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if isMaster()
+        || (signedIn() && request.resource.data.redeemed == true && resource.data.redeemed == false);
+      allow delete: if false;
+    }
   }
 }

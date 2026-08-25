@@ -241,7 +241,35 @@ h1,h2,h3{font-family:'Sora','Inter',sans-serif}
   .inv-parties{grid-template-columns:1fr}
   .auth-card{padding:26px 20px}
   .job-card{padding:13px 14px}
+  .sub-details-grid{grid-template-columns:1fr 1fr}
 }
+
+.global-banner{margin:0 18px 14px;padding:14px 18px;border-radius:var(--radius);font-size:.88rem;display:flex;align-items:center;gap:12px;animation:slideDown .3s ease}
+.global-banner.warning{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--amber)}
+.global-banner.danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--rose)}
+.global-banner a{color:var(--ice);font-weight:600;text-decoration:underline}
+.global-banner .banner-dismiss{margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;font-size:1.1rem;opacity:.7;padding:0 4px}
+.global-banner .banner-dismiss:hover{opacity:1}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+.sub-dashboard{display:flex;flex-direction:column;gap:18px}
+.sub-status-card,.sub-users-card,.sub-tokens-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.sub-status-card.expired{border-color:rgba(251,113,133,.4);background:rgba(251,113,133,.05)}
+.sub-status-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.sub-status-header h3{font-size:1.05rem}
+.sub-details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.sub-detail{background:rgba(7,20,38,.55);border:1px solid var(--border);border-radius:12px;padding:12px}
+.sub-detail small{display:block;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.sub-detail b{font-size:.95rem;font-weight:700}
+.sub-detail .text-rose{color:var(--rose)}
+.sub-user-count{font-family:'Sora',sans-serif;font-size:1.1rem;font-weight:700;color:var(--ice)}
+.sub-user-bar{height:8px;background:rgba(148,197,255,.12);border-radius:99px;overflow:hidden;margin-top:10px}
+.sub-user-bar-fill{height:100%;background:var(--grad);border-radius:99px;transition:width .4s ease}
+.token-list{display:flex;flex-direction:column;gap:8px}
+.token-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(7,20,38,.45);border:1px solid var(--border);border-radius:12px;padding:12px 16px;flex-wrap:wrap}
+.token-info{display:flex;align-items:center;gap:10px}
+.token-code{font-family:monospace;font-size:.92rem;font-weight:700;color:var(--ice);letter-spacing:.05em}
+.token-meta{font-size:.78rem;color:var(--muted)}
 
 /* ---------- Automatic light mode (follows device theme) ---------- */
 @media (prefers-color-scheme: light){
@@ -298,4 +326,11 @@ h1,h2,h3{font-family:'Sora','Inter',sans-serif}
   .icon-btn:hover{background:rgba(12,52,96,.07)}
   .empty{color:var(--muted)}
   .tab.active{font-weight:700}
+  .sub-status-card,.sub-users-card,.sub-tokens-card{background:rgba(255,255,255,.82)}
+  .sub-detail{background:rgba(255,255,255,.6);border-color:var(--border)}
+  .sub-status-card.expired{border-color:rgba(190,18,60,.35);background:rgba(190,18,60,.04)}
+  .token-row{background:rgba(255,255,255,.6)}
+  .sub-user-bar{background:rgba(12,52,96,.1)}
+  .global-banner.warning{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25)}
+  .global-banner.danger{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.25)}
 }
