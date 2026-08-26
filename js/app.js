@@ -182,11 +182,8 @@ async function init() {
     secondaryAuth = getAuth(secondaryApp);
 
     try {
-      const usersSnap = await Promise.race([
-        getDocs(collection(db, "users")),
-        new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000))
-      ]).catch(() => null);
-      hasUsersCache = !!(usersSnap && !usersSnap.empty);
+      const settingsSnap = await getDoc(doc(db, "settings", "public")).catch(() => null);
+      hasUsersCache = !!(settingsSnap && settingsSnap.exists() && settingsSnap.data().initialized);
     } catch (_) {
       hasUsersCache = true;
     }
