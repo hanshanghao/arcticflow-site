@@ -1,4 +1,4 @@
-const CACHE = "arcticflow-v21";
+const CACHE = "arcticflow-v22";
 const CORE = [
   "app.html",
   "index.html",
@@ -49,6 +49,21 @@ self.addEventListener("fetch", (e) => {
   }
 
   if (url.origin !== location.origin) return;
+
+  if (url.pathname.endsWith(".js")) {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req).then((hit) => hit || Response.error()))
+    );
+    return;
+  }
 
   e.respondWith(
     fetch(req)

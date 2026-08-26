@@ -145,34 +145,53 @@ function authError(code) {
 
 async function init() {
   const die = (msg) => {
-    $("authLoading").hidden = true;
-    $("loginForm").hidden = false;
+    try { $("authLoading").hidden = true; } catch (_) {}
+    try { $("loginForm").hidden = false; } catch (_) {}
     toast(msg || "Failed to connect. Please refresh.", true);
   };
   if (!configured) { die("Firebase not configured."); return; }
-  const safetyTimer = setTimeout(() => die("Connection timed out. Check your network."), 15000);
+  const safetyTimer = setTimeout(() => die("Connection timed out. Check your network and refresh."), 20000);
   try {
     app = initializeApp(FIREBASE_CONFIG);
     auth = getAuth(app);
-    await setPersistence(auth, browserLocalPersistence);
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-      ignoreUndefinedProperties: true,
-      experimentalAutoDetectLongPolling: true
-    });
-    if (RECAPTCHA_SITE_KEY) {
-      initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
-        isTokenAutoRefreshEnabled: true
+    await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+        ignoreUndefinedProperties: true,
+        experimentalAutoDetectLongPolling: true
       });
+    } catch (_) {
+      db = initializeFirestore(app, {
+        ignoreUndefinedProperties: true,
+        experimentalAutoDetectLongPolling: true
+      });
+    }
+
+    if (RECAPTCHA_SITE_KEY) {
+      try {
+        initializeAppCheck(app, {
+          provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+          isTokenAutoRefreshEnabled: true
+        });
+      } catch (_) {}
     }
     secondaryApp = initializeApp(FIREBASE_CONFIG, "secondary");
     secondaryAuth = getAuth(secondaryApp);
 
-    $("authLoading").hidden = true;
+    try {
+      const usersSnap = await Promise.race([
+        getDocs(collection(db, "users")),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000))
+      ]).catch(() => null);
+      hasUsersCache = !!(usersSnap && !usersSnap.empty);
+    } catch (_) {
+      hasUsersCache = true;
+    }
 
-    const usersSnap = await getDocs(collection(db, "users")).catch(() => null);
-    hasUsersCache = !!(usersSnap && !usersSnap.empty);
+    clearTimeout(safetyTimer);
+    $("authLoading").hidden = true;
 
     if (hasUsersCache) {
       $("loginForm").hidden = false;
@@ -198,12 +217,11 @@ async function init() {
       }
       enterApp();
     });
-    clearTimeout(safetyTimer);
   } catch (err) {
     clearTimeout(safetyTimer);
     $("authLoading").hidden = true;
     $("loginForm").hidden = false;
-    toast("Firebase init failed: " + err.message, true);
+    toast("Firebase init failed: " + (err.message || err), true);
   }
 }
 
