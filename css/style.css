@@ -230,26 +230,6 @@ section{padding:110px 0;scroll-margin-top:90px;position:relative}
 .reviewer strong{font-size:.9rem;display:block}
 .reviewer span{font-size:.75rem;color:var(--muted)}
 
-.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch}
-.plan{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:34px 28px;display:flex;flex-direction:column;transition:transform .3s,border-color .3s}
-.plan:hover{transform:translateY(-6px)}
-.plan.popular{background:linear-gradient(rgba(10,26,48,.9),rgba(10,26,48,.9)) padding-box,var(--grad) border-box;border:1.5px solid transparent;box-shadow:0 30px 70px rgba(34,100,246,.22);transform:scale(1.03)}
-.plan.popular:hover{transform:scale(1.03) translateY(-6px)}
-.plan-tag{align-self:flex-start;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--grad);color:#03101f;padding:5px 12px;border-radius:999px;margin-bottom:16px}
-.plan h3{font-size:1.15rem;margin-bottom:6px}
-.plan-desc{font-size:.82rem;color:var(--muted);margin-bottom:20px}
-.price{font-family:'Sora',sans-serif;font-size:2.5rem;font-weight:800;letter-spacing:-.03em;line-height:1}
-.price small{font-size:.85rem;font-weight:500;color:var(--muted);letter-spacing:0}
-.plan ul{list-style:none;margin:24px 0 28px;display:flex;flex-direction:column;gap:11px;flex:1}
-.plan li{display:flex;gap:10px;font-size:.88rem;color:#c9dcf3;align-items:flex-start}
-.plan li svg{stroke:var(--ice);flex-shrink:0;margin-top:3px}
-.plan .btn,.plan .paypal-btn-wrap{width:100%}
-.plan-users{font-size:.82rem;color:var(--muted);margin-top:-10px;margin-bottom:18px}
-.plan-users strong{color:var(--ice);font-weight:700}
-.plan-savings{display:inline-block;font-size:.72rem;font-weight:700;color:var(--green);background:rgba(52,211,153,.12);padding:4px 10px;border-radius:999px;margin-top:-12px;margin-bottom:14px}
-.plan-note{font-size:.75rem;color:var(--muted);text-align:center;margin-top:8px}
-.paypal-btn-wrap{min-height:50px;display:flex;align-items:center;justify-content:center}
-
 .cta-panel{position:relative;border-radius:30px;padding:80px 40px;text-align:center;overflow:hidden;background:linear-gradient(160deg,#0a1c33,#071426);border:1px solid var(--border)}
 .cta-panel::before{content:"";position:absolute;width:600px;height:400px;top:-200px;left:50%;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(34,211,238,.22),transparent);pointer-events:none}
 .cta-panel h2{font-size:clamp(1.9rem,4vw,2.8rem);font-weight:800;letter-spacing:-.02em;margin-bottom:16px}
@@ -281,7 +261,7 @@ footer{border-top:1px solid var(--border);padding:70px 0 34px;background:rgba(4,
   .hero-stats{gap:28px}
   .split{grid-template-columns:1fr;gap:44px}
   .split.reverse .split-copy{order:0}
-  .features-grid,.steps-grid,.reviews-grid,.plans-grid{grid-template-columns:repeat(2,1fr)}
+  .features-grid,.steps-grid,.reviews-grid{grid-template-columns:repeat(2,1fr)}
   .security-wrap{grid-template-columns:1fr;gap:50px;text-align:center}
   .sec-grid{text-align:left}
   .fc-1{right:2%}
@@ -299,9 +279,7 @@ footer{border-top:1px solid var(--border);padding:70px 0 34px;background:rgba(4,
 }
 @media(max-width:640px){
   section{padding:80px 0}
-  .features-grid,.steps-grid,.reviews-grid,.plans-grid,.sec-grid{grid-template-columns:1fr}
-  .plan.popular{transform:none}
-  .plan.popular:hover{transform:translateY(-6px)}
+  .features-grid,.steps-grid,.reviews-grid,.sec-grid{grid-template-columns:1fr}
   .footer-grid{grid-template-columns:1fr 1fr}
   .float-card{padding:10px 13px}
   .fc-1{top:4%;right:0}
@@ -339,19 +317,6 @@ html{color-scheme:dark}
 .error-page p{color:var(--muted);max-width:420px}
 .error-page .btn{margin-top:10px}
 
-.payment-success{position:fixed;inset:0;z-index:200;background:rgba(2,6,14,.85);backdrop-filter:blur(8px);display:grid;place-items:center;padding:24px}
-.payment-success-card{background:linear-gradient(180deg,rgba(148,197,255,.08),rgba(148,197,255,.03));border:1px solid var(--border);border-radius:24px;padding:40px 36px;max-width:500px;width:100%;text-align:center;box-shadow:0 40px 90px rgba(0,0,0,.6)}
-.ps-icon{display:flex;justify-content:center;margin-bottom:16px}
-.ps-icon svg{stroke:var(--green)}
-.payment-success-card h3{font-size:1.5rem;margin-bottom:8px}
-.ps-details{background:rgba(7,20,38,.6);border:1px solid var(--border);border-radius:14px;padding:16px;margin:20px 0;text-align:left}
-.ps-details code{font-size:1.05rem;font-weight:700;color:var(--ice);letter-spacing:.05em;word-break:break-all}
-.ps-note{font-size:.8rem;color:var(--muted);margin-top:8px;margin-bottom:0}
-.ps-instructions{text-align:left;margin:20px 0}
-.ps-instructions h4{font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--ice)}
-.ps-instructions ol{padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:.88rem;color:var(--muted)}
-.ps-instructions a{color:var(--ice);font-weight:600}
-.ps-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
 @media(max-width:520px){.waitlist{flex-direction:column}}
 
 #toTop{position:fixed;right:22px;bottom:22px;z-index:999;width:46px;height:46px;display:grid;place-items:center;border:none;border-radius:50%;cursor:pointer;color:#03101f;background:var(--grad);box-shadow:0 10px 30px rgba(34,211,238,.3);opacity:0;visibility:hidden;transform:translateY(14px);transition:opacity .3s ease,transform .3s ease,visibility .3s}
@@ -401,8 +366,6 @@ html{color-scheme:dark}
   .visual-panel{box-shadow:0 30px 70px rgba(30,64,120,.14)}
   .invoice{background:rgba(255,255,255,.72);border-color:var(--border)}
   .review blockquote{color:#33465f;font-weight:500}
-  .plan li{color:#33465f}
-  .plan.popular{background:linear-gradient(rgba(255,255,255,.94),rgba(255,255,255,.94)) padding-box,var(--grad) border-box;box-shadow:0 30px 70px rgba(37,99,235,.18)}
   .cta-panel{background:linear-gradient(160deg,#e1effe,#d2e6fc)}
   .footer{background:transparent}
   footer{background:rgba(228,239,250,.65)}
@@ -413,9 +376,4 @@ html{color-scheme:dark}
   .footer-col h4{font-weight:700}
   .crew,.inv-row,.inv-total,.footer-bottom{border-top-color:rgba(15,60,110,.12)}
   .bar{background:rgba(12,52,96,.12)}
-  .payment-success{background:rgba(15,35,60,.55)}
-  .payment-success-card{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,255,255,.88));box-shadow:0 40px 90px rgba(30,64,120,.22)}
-  .payment-success-card h3{color:#040b16}
-  .ps-details{background:rgba(255,255,255,.7);border-color:var(--border)}
-  .ps-instructions ol{color:#33465f}
 }

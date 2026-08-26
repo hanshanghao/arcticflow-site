@@ -1,4 +1,4 @@
-const CACHE = "arcticflow-v20";
+const CACHE = "arcticflow-v21";
 const CORE = [
   "app.html",
   "index.html",
@@ -6,7 +6,6 @@ const CORE = [
   "css/style.css",
   "js/main.js",
   "js/app.js",
-  "js/email-config.js",
   "images/favicon.svg",
   "images/icon-192.png",
   "images/icon-512.png",

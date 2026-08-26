@@ -39,34 +39,23 @@
         <p class="noscript-note">This app needs JavaScript enabled to sign in and sync data.</p>
       </noscript>
 
-      <form id="tokenForm" class="auth-form" autocomplete="off">
-        <h1>Enter your access token</h1>
-        <p class="auth-sub">After subscribing, you'll receive an access token by email. Enter it below to create your master admin account.</p>
-        <label>Access token
-          <input type="text" name="token" required placeholder="AF-XXXX-XXXX-XXXX" style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace;font-size:1.05rem" autocomplete="off">
-        </label>
-        <p id="tokenError" class="form-error" hidden></p>
-        <button type="submit" class="btn btn-primary btn-block">Verify token</button>
-        <p style="text-align:center;margin-top:16px;font-size:.85rem;color:var(--muted)">Don't have a token? <a href="index.html#pricing" style="color:var(--ice);font-weight:600">Subscribe now</a></p>
-      </form>
-
-      <form id="bootstrapForm" class="auth-form" hidden autocomplete="off">
-        <h1>Create master account</h1>
-        <p class="auth-sub">First run: this becomes your office master login. All staff logins are generated from here.</p>
+      <form id="setupForm" class="auth-form" hidden autocomplete="off">
+        <h1>Create admin account</h1>
+        <p class="auth-sub">First run: this becomes your office master login. All staff logins are created from here.</p>
         <label>Your name
           <input type="text" name="name" required placeholder="e.g. Alex Rivera">
         </label>
-        <label>Master email
+        <label>Email
           <input type="email" name="email" required autocomplete="email" placeholder="admin@company.com">
         </label>
         <label>Password
           <input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Min 6 characters">
         </label>
-        <p id="bootstrapError" class="form-error" hidden></p>
-        <button type="submit" class="btn btn-primary btn-block">Create master login</button>
+        <p id="setupError" class="form-error" hidden></p>
+        <button type="submit" class="btn btn-primary btn-block">Create admin account</button>
       </form>
 
-      <form id="loginForm" class="auth-form" hidden autocomplete="on">
+      <form id="loginForm" class="auth-form" autocomplete="on">
         <h1>Welcome back</h1>
         <p class="auth-sub">Sign in with the account created by your office admin.</p>
         <label>Email
@@ -79,7 +68,6 @@
         <button type="submit" class="btn btn-primary btn-block">Sign in</button>
         <button type="button" id="forgotBtn" class="btn-link">Forgot password?</button>
         <a class="btn-link" href="privacy.html" target="_blank">How your data is protected</a>
-        <p style="text-align:center;margin-top:12px;font-size:.82rem;color:var(--muted)">Don't have an account? <a href="index.html#pricing" style="color:var(--ice);font-weight:600">Subscribe now</a></p>
       </form>
 
       <div id="authLoading" class="auth-status" role="status"><span class="spinner"></span>Connecting to secure cloud…</div>
@@ -110,7 +98,6 @@
   </header>
 
   <main class="app-main">
-    <div id="globalBanner" class="global-banner" hidden></div>
     <section id="view-schedule" class="view" hidden>
       <div class="view-head">
         <div>
@@ -178,16 +165,6 @@
       </div>
       <div id="invoiceList" class="invoice-list"></div>
     </section>
-
-    <section id="view-subscription" class="view" hidden>
-      <div class="view-head">
-        <div>
-          <h2>Subscription</h2>
-          <p class="view-sub">Manage your plan, users, and access tokens.</p>
-        </div>
-      </div>
-      <div id="subscriptionView"></div>
-    </section>
   </main>
 </div>
 
@@ -198,7 +175,5 @@
 <div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
 
 <script type="module" src="js/app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/email-config.js"></script>
 </body>
 </html>

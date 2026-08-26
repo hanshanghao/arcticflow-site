@@ -8,24 +8,12 @@ Pure static site — no build step, no dependencies. Deploy anywhere.
 
 ---
 
-## Subscription System
+## How It Works
 
-Arctic Flow uses a subscription-based model with PayPal payments.
-
-| Plan | Price | Duration | Max Users |
-|------|-------|----------|-----------|
-| **Starter** | $49.99 | 1 month | 5 users |
-| **Growth** | $249.99 | 6 months | 10 users |
-| **Enterprise** | $449.99 | 1 year | 20 users |
-
-### How It Works
-
-1. Customer picks a plan on the landing page → pays via PayPal
-2. Access token generated (`AF-XXXX-XXXX-XXXX`) → welcome email sent via EmailJS
-3. Customer enters token at `app.html` → creates master admin account
-4. Master admin adds team members from "Team & Logins" tab
-5. Each team member gets a welcome email with sign-in instructions
-6. In-app renewal reminder warns 30 days before expiry
+1. Master admin creates team accounts with email, password, role, and validity period
+2. Team members sign in at `app.html` with their credentials
+3. Users with expired access are automatically locked out
+4. Master admin controls all accounts from the "Team & Logins" tab
 
 ---
 
@@ -54,22 +42,11 @@ A real multi-device web app. Office staff get full schedule control; technicians
    - Secret: paste the entire JSON file contents
 3. Push any change to `firestore.rules` — rules deploy automatically.
 
-### EmailJS Setup (automated emails)
-
-Arctic Flow uses [EmailJS](https://www.emailjs.com/) for sending welcome and team invite emails (free tier: 200 emails/month).
-
-1. Create a free account at https://www.emailjs.com/
-2. **Email → Add Service** → select Gmail → connect your account
-3. **Email → Templates** → create 2 templates (see `js/email-config.js` for HTML)
-4. **Account → API Keys** → copy your **Public Key**
-5. Edit `js/email-config.js` with your credentials
-6. Deploy: `firebase deploy --only hosting`
-
 ### First run — master login
 
-Open `app.html`. Enter your access token, then create the master account (office admin). From there:
+Open `app.html`. If no accounts exist, create the master admin account. From there:
 
-- **Team & logins tab → "+ New login"**: create every technician and office staff account.
+- **Team & logins tab → "+ New login"**: create every technician and office staff account with a validity period.
 - Technicians install the app: open the site → browser menu → **"Add to Home Screen"**. Runs fullscreen like a native app, even offline.
 
 ### Who sees what
@@ -96,7 +73,7 @@ Security is enforced twice: the UI hides what a role can't do, and `firestore.ru
 
 ```
 arcticflow-site/
-├── index.html              Landing page with pricing + PayPal checkout
+├── index.html              Landing page with product info
 ├── app.html                Field app (login → office/technician dashboards)
 ├── privacy.html            Privacy policy
 ├── terms.html              Terms of service
@@ -105,7 +82,6 @@ arcticflow-site/
 ├── css/app.css             App styles
 ├── js/main.js              Landing behavior (deferred, dependency-free)
 ├── js/app.js               App logic — Firebase auth + Firestore realtime data
-├── js/email-config.js      EmailJS configuration (Public Key, Service ID, Template IDs)
 ├── sw.js                   Service worker (offline shell, installable PWA)
 ├── firestore.rules         Server-side role security
 ├── firebase.json           Firebase CLI config

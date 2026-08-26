@@ -73,14 +73,10 @@ let unsubs = [];
 let activeView = "schedule";
 let scheduleDate = todayStr();
 let allJobsStatusFilter = "";
-let currentSubscription = null;
-let currentTokenData = null;
 const configured = FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).startsWith("PASTE_");
 const isOffice = () => !!me && (me.role === "office" || me.isAdmin === true);
 const isMaster = () => !!me && me.isAdmin === true;
 const initials = (n) => (n || "?").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-const TIER_LABEL = { starter: "Starter", growth: "Growth", enterprise: "Enterprise" };
-const TIER_MAX_USERS = { starter: 5, growth: 10, enterprise: 20 };
 
 function toast(msg, isErr) {
   const t = document.createElement("div");
@@ -142,18 +138,17 @@ async function init() {
     secondaryApp = initializeApp(FIREBASE_CONFIG, "secondary");
     secondaryAuth = getAuth(secondaryApp);
 
-    const bootSnap = await getDoc(doc(db, "settings", "public")).catch(() => null);
-    const bootstrapped = !!bootSnap && bootSnap.exists() && bootSnap.data().initialized === true;
     $("authLoading").hidden = true;
 
-    if (bootstrapped) {
+    const usersSnap = await getDocs(collection(db, "users")).catch(() => null);
+    const hasUsers = usersSnap && !usersSnap.empty;
+
+    if (hasUsers) {
       $("loginForm").hidden = false;
-      $("bootstrapForm").hidden = true;
-      $("tokenForm").hidden = true;
+      $("setupForm").hidden = true;
     } else {
       $("loginForm").hidden = true;
-      $("bootstrapForm").hidden = true;
-      $("tokenForm").hidden = false;
+      $("setupForm").hidden = false;
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -165,11 +160,16 @@ async function init() {
       if (!snap.exists()) { await signOut(auth); toast("No staff profile linked to this account.", true); return; }
       me = { id: user.uid, ...snap.data() };
       if (me.active === false) { await signOut(auth); toast("This account has been deactivated by your office.", true); return; }
+      if (me.validUntil && me.validUntil < Date.now()) {
+        await signOut(auth);
+        toast("Your access has expired. Contact your admin.", true);
+        return;
+      }
       enterApp();
     });
   } catch (err) {
     $("authLoading").hidden = true;
-    $("tokenForm").hidden = false;
+    $("loginForm").hidden = false;
     toast("Firebase init failed: " + err.message, true);
   }
 }
@@ -180,19 +180,17 @@ function showAuthScreen() {
   jobs = [];
   $("appShell").hidden = true;
   $("authScreen").hidden = false;
-  $("tokenForm").hidden = true;
-  $("bootstrapForm").hidden = true;
+  $("setupForm").hidden = true;
   $("loginForm").hidden = true;
   $("authLoading").hidden = false;
   document.title = "Arctic Flow — Field App";
 
-  getDoc(doc(db, "settings", "public")).catch(() => null).then((snap) => {
+  getDocs(collection(db, "users")).catch(() => null).then((snap) => {
     $("authLoading").hidden = true;
-    const bootstrapped = !!snap && snap.exists() && snap.data().initialized === true;
-    if (bootstrapped) {
+    if (snap && !snap.empty) {
       $("loginForm").hidden = false;
     } else {
-      $("tokenForm").hidden = false;
+      $("setupForm").hidden = false;
     }
   });
 }
@@ -223,64 +221,15 @@ $("forgotBtn").addEventListener("click", async () => {
   }
 });
 
-$("tokenForm").addEventListener("submit", async (e) => {
+$("setupForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = e.target;
   const btn = f.querySelector('button[type="submit"]');
-  $("tokenError").hidden = true;
+  $("setupError").hidden = true;
   btn.disabled = true;
-  const token = f.token.value.trim().toUpperCase();
   try {
-    const tokenSnap = await getDoc(doc(db, "tokens", token));
-    if (!tokenSnap.exists()) {
-      $("tokenError").textContent = "Invalid access token. Please check your email for the correct token.";
-      $("tokenError").hidden = false;
-      btn.disabled = false;
-      return;
-    }
-    const td = tokenSnap.data();
-    if (td.redeemed) {
-      $("tokenError").textContent = "This token has already been used. Check your email for login instructions.";
-      $("tokenError").hidden = false;
-      btn.disabled = false;
-      return;
-    }
-    const subSnap = await getDoc(doc(db, "subscriptions", td.subscriptionId));
-    if (!subSnap.exists() || !subSnap.data().active) {
-      $("tokenError").textContent = "The subscription linked to this token is no longer active. Please renew.";
-      $("tokenError").hidden = false;
-      btn.disabled = false;
-      return;
-    }
-    const sub = subSnap.data();
-    if (sub.expiresAt && sub.expiresAt < Date.now()) {
-      $("tokenError").textContent = "This subscription has expired. Please renew to continue.";
-      $("tokenError").hidden = false;
-      btn.disabled = false;
-      return;
-    }
-    currentTokenData = { ...td, subscription: sub };
-    currentSubscription = sub;
-    $("tokenForm").hidden = true;
-    $("bootstrapForm").hidden = false;
-    $("bootstrapForm").querySelector("h1").textContent = "Create your master admin account";
-    $("bootstrapForm").querySelector(".auth-sub").textContent =
-      "Token verified! Plan: " + (TIER_LABEL[td.tier] || td.tier) + " (" + td.maxUsers + " user accounts). Create your master login — this becomes your office admin.";
-  } catch (err) {
-    $("tokenError").textContent = "Error validating token: " + err.message;
-    $("tokenError").hidden = false;
-  }
-  btn.disabled = false;
-});
-
-$("bootstrapForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const f = e.target;
-  const btn = f.querySelector('button[type="submit"]');
-  $("bootstrapError").hidden = true;
-  btn.disabled = true;
-  const finishBootstrap = async (uid) => {
-    await setDoc(doc(db, "users", uid), {
+    const cred = await createUserWithEmailAndPassword(auth, f.email.value.trim(), f.password.value);
+    await setDoc(doc(db, "users", cred.user.uid), {
       name: f.name.value.trim(),
       email: f.email.value.trim(),
       role: "office",
@@ -288,43 +237,34 @@ $("bootstrapForm").addEventListener("submit", async (e) => {
       active: true,
       createdBy: "system",
       createdAt: Date.now(),
-      subscriptionId: currentTokenData.subscriptionId,
-      tier: currentTokenData.tier
-    });
-    await updateDoc(doc(db, "tokens", currentTokenData.token), {
-      redeemed: true,
-      redeemedBy: uid,
-      redeemedByEmail: f.email.value.trim(),
-      redeemedAt: Date.now()
+      validUntil: Date.now() + (365 * 24 * 60 * 60 * 1000)
     });
     await setDoc(doc(db, "settings", "public"), { initialized: true }).catch(() => {});
-
-    sendRedemptionEmail(f.email.value.trim(), f.name.value.trim());
-  };
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, f.email.value.trim(), f.password.value);
-    await finishBootstrap(cred.user.uid);
   } catch (err) {
     if (err.code === "auth/email-already-in-use") {
       try {
         const cred = await signInWithEmailAndPassword(auth, f.email.value.trim(), f.password.value);
         const existing = await getDoc(doc(db, "users", cred.user.uid));
-        if (!existing.exists()) await finishBootstrap(cred.user.uid);
-        else {
-          await updateDoc(doc(db, "tokens", currentTokenData.token), {
-            redeemed: true,
-            redeemedBy: cred.user.uid,
-            redeemedAt: Date.now()
-          }).catch(() => {});
+        if (!existing.exists()) {
+          await setDoc(doc(db, "users", cred.user.uid), {
+            name: f.name.value.trim(),
+            email: f.email.value.trim(),
+            role: "office",
+            isAdmin: true,
+            active: true,
+            createdBy: "system",
+            createdAt: Date.now(),
+            validUntil: Date.now() + (365 * 24 * 60 * 60 * 1000)
+          });
           await setDoc(doc(db, "settings", "public"), { initialized: true }).catch(() => {});
         }
       } catch (err2) {
-        $("bootstrapError").textContent = authError(err2.code || err.code);
-        $("bootstrapError").hidden = false;
+        $("setupError").textContent = authError(err2.code || err.code);
+        $("setupError").hidden = false;
       }
     } else {
-      $("bootstrapError").textContent = authError(err.code);
-      $("bootstrapError").hidden = false;
+      $("setupError").textContent = authError(err.code);
+      $("setupError").hidden = false;
     }
   }
   btn.disabled = false;
@@ -342,25 +282,6 @@ function enterApp() {
   rb.textContent = isOffice() ? "Office staff" : "Technician";
   rb.className = "role-badge" + (isOffice() ? " office" : "");
   ensureExportButton();
-
-  loadSubscriptionData().then(() => {
-    if (!currentSubscription || !isMaster()) return;
-    const sub = currentSubscription;
-    const banner = $("globalBanner");
-    if (!banner) return;
-    if (sub.expiresAt && sub.expiresAt < Date.now()) {
-      banner.className = "global-banner danger";
-      banner.innerHTML = '<span>&#9888;</span> Your subscription has expired. Team members can no longer access the app. <a href="index.html#pricing">Renew now</a> to restore access.<button class="banner-dismiss" onclick="this.parentElement.hidden=true">&times;</button>';
-      banner.hidden = false;
-    } else if (sub.expiresAt) {
-      const daysLeft = Math.ceil((sub.expiresAt - Date.now()) / (1000 * 60 * 60 * 24));
-      if (daysLeft <= 30) {
-        banner.className = "global-banner warning";
-        banner.innerHTML = '<span>&#9888;</span> Your ' + (TIER_LABEL[sub.tier] || '') + ' subscription renews in <strong>' + daysLeft + ' day' + (daysLeft === 1 ? '' : 's') + '</strong>. <a href="index.html#pricing">Extend now</a> to avoid interruption.<button class="banner-dismiss" onclick="this.parentElement.hidden=true">&times;</button>';
-        banner.hidden = false;
-      }
-    }
-  });
 
   const jobsQ = isOffice() ? collection(db, "jobs") : query(collection(db, "jobs"), where("assignedTo", "==", me.id));
   unsubs.push(onSnapshot(jobsQ, (snap) => {
@@ -381,23 +302,10 @@ function enterApp() {
   switchView(isOffice() ? "schedule" : "myjobs");
 }
 
-async function loadSubscriptionData() {
-  if (!isMaster() || !me.subscriptionId) return;
-  try {
-    const subSnap = await getDoc(doc(db, "subscriptions", me.subscriptionId));
-    if (subSnap.exists()) {
-      currentSubscription = { id: subSnap.id, ...subSnap.data() };
-    }
-  } catch (err) {
-    console.warn("Could not load subscription:", err);
-  }
-}
-
 function buildTabs() {
   const tabs = isOffice()
     ? [["schedule", "Schedule"], ["alljobs", "All jobs"], ["invoices", "Invoices"], ["team", "Team & logins"]]
     : [["myjobs", "My jobs"], ["invoices", "Invoices"]];
-  if (isMaster()) tabs.push(["subscription", "Subscription"]);
   $("tabs").innerHTML = tabs
     .map(([id, label]) => `<button type="button" class="tab${activeView === id ? " active" : ""}" data-view="${id}">${label}</button>`)
     .join("");
@@ -422,8 +330,7 @@ function renderActiveView() {
     alljobs: renderAllJobs,
     myjobs: renderMyJobs,
     team: renderTeam,
-    invoices: renderInvoices,
-    subscription: renderSubscription
+    invoices: renderInvoices
   }[activeView] || (() => {}))();
 }
 
@@ -481,7 +388,7 @@ function renderSchedule() {
   $("scheduleCount").textContent = fmtLongDate(scheduleDate) + " · " + list.length + " job" + (list.length === 1 ? "" : "s");
   $("scheduleList").innerHTML = list.length
     ? list.map(jobCard).join("")
-    : `<div class="empty">No jobs booked for ${esc(fmtLongDate(scheduleDate))}.<br>Use “+ New job” to book the first one.</div>`;
+    : `<div class="empty">No jobs booked for ${esc(fmtLongDate(scheduleDate))}.<br>Use "+ New job" to book the first one.</div>`;
 }
 
 $("dayPicker").addEventListener("change", (e) => { scheduleDate = e.target.value || todayStr(); renderSchedule(); });
@@ -508,7 +415,7 @@ function ensureExportButton() {
     btn.id = "exportDayBtn";
     btn.className = "btn btn-ghost btn-sm";
     btn.title = "Export this day's jobs as an Excel spreadsheet";
-    btn.textContent = "⬇ Export day";
+    btn.textContent = "\u2B07 Export day";
     host.insertBefore(btn, $("newJobBtn"));
   }
   btn.hidden = false;
@@ -764,12 +671,24 @@ function renderMyJobs() {
 function renderTeam() {
   const list = Object.values(users).sort((a, b) => (Number(b.isAdmin) - Number(a.isAdmin)) || String(a.name).localeCompare(String(b.name)));
   $("teamList").innerHTML = list.length
-    ? list.map((u, i) => `
+    ? list.map((u, i) => {
+        let validInfo = "";
+        if (u.validUntil) {
+          const msLeft = u.validUntil - Date.now();
+          if (msLeft > 0) {
+            const days = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+            validInfo = `<p class="meta">Valid for ${days} more day${days === 1 ? "" : "s"} (until ${new Date(u.validUntil).toLocaleDateString()})</p>`;
+          } else {
+            validInfo = `<p class="meta" style="color:var(--rose)">Expired — contact admin to extend</p>`;
+          }
+        }
+        return `
       <div class="team-row">
         <div class="avatar sm ${i % 3 === 1 ? "alt" : i % 3 === 2 ? "alt2" : ""}">${esc(initials(u.name))}</div>
         <div class="team-info">
           <strong>${esc(u.name)}${u.id === me.id ? " (you)" : ""}</strong>
           <p>${esc(u.email)}</p>
+          ${validInfo}
           ${u.createdBy && u.createdBy !== "system" ? `<p>Created by ${esc(u.createdBy)}</p>` : ""}
         </div>
         <span class="tag ${u.isAdmin ? "office" : "tech"}">${u.isAdmin ? "Master admin" : u.role === "office" ? "Office staff" : "Technician"}</span>
@@ -777,7 +696,8 @@ function renderTeam() {
         ${me.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-user="${u.id}">Edit</button>` : ""}
         ${me.isAdmin && u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-switch-role="${u.id}">${u.role === "office" ? "Make technician" : "Make office staff"}</button>` : ""}
         ${u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn ${u.active === false ? "btn-primary" : "btn-danger"} btn-sm" data-toggle-user="${u.id}">${u.active === false ? "Activate" : "Deactivate"}</button>` : ""}
-      </div>`).join("")
+      </div>`;
+      }).join("")
     : `<div class="empty">No team members yet.</div>`;
 }
 
@@ -840,6 +760,9 @@ function openUserForm() {
             <option value="office">Office staff — full schedule access</option>
           </select>
         </label>
+        <label class="full">Valid until
+          <input type="date" name="validUntil" required value="${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}">
+        </label>
       </div>
       <p id="userFormError" class="form-error" hidden></p>
       <div class="modal-actions">
@@ -853,6 +776,8 @@ function openUserForm() {
 function openUserEditForm(u) {
   const canRole = !u.isAdmin && u.id !== me.id;
   const canActive = !u.isAdmin && u.id !== me.id;
+  const canValidUntil = me.isAdmin;
+  const validUntilValue = u.validUntil ? new Date(u.validUntil).toISOString().slice(0, 10) : "";
   openModal(`
     <h3>Edit account</h3>
     <p class="modal-sub">Changes apply instantly. The sign-in email is managed by Firebase and cannot be changed here — jobs and invoice history stay linked to this account.</p>
@@ -871,6 +796,8 @@ function openUserEditForm(u) {
         <input type="checkbox" name="active" style="width:auto;margin-top:0" ${u.active !== false ? "checked" : ""}>
         Login active
       </label>` : ""}
+      ${canValidUntil ? `
+      <label>Valid until<input type="date" name="validUntil" value="${esc(validUntilValue)}"></label>` : ""}
       <p id="editUserError" class="form-error" hidden></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" data-close>Cancel</button>
@@ -884,6 +811,9 @@ function openUserEditForm(u) {
     const patch = { name: f.name.value.trim() };
     if (canRole) patch.role = f.role.value;
     if (canActive) patch.active = f.active.checked;
+    if (canValidUntil && f.validUntil.value) {
+      patch.validUntil = new Date(f.validUntil.value + "T23:59:59").getTime();
+    }
     try {
       await updateDoc(doc(db, "users", u.id), patch);
       toast("Account updated.");
@@ -903,32 +833,9 @@ async function onCreateUser(e) {
   errEl.hidden = true;
   f.querySelector('button[type="submit"]').disabled = true;
 
-  if (isMaster() && me.subscriptionId) {
-    try {
-      const subSnap = await getDoc(doc(db, "subscriptions", me.subscriptionId));
-      if (subSnap.exists()) {
-        const sub = subSnap.data();
-        if (sub.expiresAt && sub.expiresAt < Date.now()) {
-          errEl.textContent = "Your subscription has expired. Please renew to add team members.";
-          errEl.hidden = false;
-          f.querySelector('button[type="submit"]').disabled = false;
-          return;
-        }
-        const currentUserCount = Object.values(users).filter((u) => u.active !== false).length;
-        if (currentUserCount >= sub.maxUsers) {
-          errEl.textContent = "User limit reached (" + sub.maxUsers + " accounts on " + (TIER_LABEL[sub.tier] || sub.tier) + " plan). Upgrade your subscription to add more team members.";
-          errEl.hidden = false;
-          f.querySelector('button[type="submit"]').disabled = false;
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("Subscription check failed:", err);
-    }
-  }
-
   try {
     const cred = await createUserWithEmailAndPassword(secondaryAuth, f.email.value.trim(), f.password.value);
+    const validUntilMs = new Date(f.validUntil.value + "T23:59:59").getTime();
     await setDoc(doc(db, "users", cred.user.uid), {
       name: f.name.value.trim(),
       email: f.email.value.trim(),
@@ -936,12 +843,12 @@ async function onCreateUser(e) {
       isAdmin: false,
       active: true,
       createdBy: me.name,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      validUntil: validUntilMs
     });
     await signOut(secondaryAuth);
     closeModal();
     toast("Login created for " + f.name.value.trim() + ".");
-    sendTeamMemberEmail(f.email.value.trim(), f.name.value.trim(), f.role.value);
   } catch (err) {
     errEl.textContent = authError(err.code);
     errEl.hidden = false;
@@ -978,11 +885,11 @@ function openJobForm(job) {
         <label>Customer name<input name="custName" required value="${esc((s.customer && s.customer.name) || "")}" placeholder="e.g. Central Plaza Tower"></label>
         <label>Customer phone<input type="tel" name="custPhone" value="${esc((s.customer && s.customer.phone) || "")}" placeholder="+1 555 0100"></label>
         <label class="full">Site address<textarea name="custAddress" rows="2" placeholder="Street, unit, city">${esc((s.customer && s.customer.address) || "")}</textarea></label>
-        <label class="full">Map link (optional)<input name="locationLink" value="${esc(s.locationLink || "")}" placeholder="https://maps.google.com/…"></label>
+        <label class="full">Map link (optional)<input name="locationLink" value="${esc(s.locationLink || "")}" placeholder="https://maps.google.com/..."></label>
         <label class="full">First service line<input name="svcDesc" value="${esc(svc.desc)}" placeholder="e.g. Diagnostic & service call">
           <input style="margin-top:8px" type="number" step="0.01" min="0" name="svcAmount" value="${esc(String(svc.amount ?? ""))}" placeholder="Amount $">
         </label>
-        <label class="full">Notes<textarea name="notes" rows="2" placeholder="Access info, gate codes, unit details…">${esc(s.notes || "")}</textarea></label>
+        <label class="full">Notes<textarea name="notes" rows="2" placeholder="Access info, gate codes, unit details...">${esc(s.notes || "")}</textarea></label>
       </div>
       <p id="jobFormError" class="form-error" hidden></p>
       <div class="modal-actions">
@@ -1327,7 +1234,7 @@ function renderInvoices() {
           <span class="job-total">${money(j.invoice.total)}</span>
         </div>
       </div>`).join("")
-    : `<div class="empty">No invoices yet.<br>Open a job and tap “Generate digital invoice”.</div>`;
+    : `<div class="empty">No invoices yet.<br>Open a job and tap "Generate digital invoice".</div>`;
 }
 
 function bindInvoiceOpen(containerId) {
@@ -1445,179 +1352,6 @@ function printInvoice(job) {
   const safety = setTimeout(cleanup, 120000);
   window.addEventListener("afterprint", cleanup);
   window.print();
-}
-
-function renderSubscription() {
-  if (!isMaster()) return;
-  const container = $("subscriptionView");
-  if (!container) return;
-
-  if (!me.subscriptionId) {
-    container.innerHTML = `<div class="empty">No active subscription found.<br>Visit <a href="index.html#pricing" style="color:var(--ice)">our pricing page</a> to subscribe.</div>`;
-    return;
-  }
-
-  const sub = currentSubscription;
-  if (!sub) {
-    container.innerHTML = `<div class="empty">Loading subscription data…</div>`;
-    return;
-  }
-
-  const daysLeft = sub.expiresAt ? Math.max(0, Math.ceil((sub.expiresAt - Date.now()) / (1000 * 60 * 60 * 24))) : "∞";
-  const userCount = Object.values(users).length;
-  const tierLabel = TIER_LABEL[sub.tier] || sub.tier;
-  const expired = sub.expiresAt && sub.expiresAt < Date.now();
-
-  container.innerHTML = `
-    <div class="sub-dashboard">
-      <div class="sub-status-card ${expired ? 'expired' : ''}">
-        <div class="sub-status-header">
-          <h3>${tierLabel} Plan</h3>
-          <span class="pill ${expired ? 'rose' : 'green'}">${expired ? 'Expired' : 'Active'}</span>
-        </div>
-        <div class="sub-details-grid">
-          <div class="sub-detail"><small>Price paid</small><b>$${(sub.price || 0).toFixed(2)}</b></div>
-          <div class="sub-detail"><small>Duration</small><b>${sub.durationMonths || 0} month${(sub.durationMonths || 0) > 1 ? 's' : ''}</b></div>
-          <div class="sub-detail"><small>Max users</small><b>${sub.maxUsers || 0}</b></div>
-          <div class="sub-detail"><small>Days remaining</small><b class="${expired ? 'text-rose' : ''}">${daysLeft}</b></div>
-          <div class="sub-detail"><small>Started</small><b>${sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : '—'}</b></div>
-          <div class="sub-detail"><small>Expires</small><b>${sub.expiresAt ? new Date(sub.expiresAt).toLocaleDateString() : '—'}</b></div>
-        </div>
-        ${expired ? `<p style="color:var(--rose);font-size:.88rem;margin-top:14px">Your subscription has expired. Team members can no longer access the app. <a href="index.html#pricing" style="color:var(--ice)">Renew now</a> to restore access.</p>` : ''}
-        ${!expired && daysLeft <= 30 ? `<p style="color:var(--amber);font-size:.88rem;margin-top:14px">Your subscription renews in ${daysLeft} days. <a href="index.html#pricing" style="color:var(--ice)">Extend now</a> to avoid interruption.</p>` : ''}
-      </div>
-
-      <div class="sub-users-card">
-        <div class="sub-status-header">
-          <h3>Team accounts</h3>
-          <span class="sub-user-count">${userCount} / ${sub.maxUsers || 0}</span>
-        </div>
-        <div class="sub-user-bar">
-          <div class="sub-user-bar-fill" style="width:${Math.min(100, (userCount / (sub.maxUsers || 1)) * 100)}%"></div>
-        </div>
-        ${userCount >= (sub.maxUsers || 0) ? `<p style="color:var(--amber);font-size:.85rem;margin-top:8px">User limit reached. <a href="index.html#pricing" style="color:var(--ice)">Upgrade your plan</a> to add more.</p>` : `<p style="color:var(--muted);font-size:.85rem;margin-top:8px">${(sub.maxUsers || 0) - userCount} more account${(sub.maxUsers || 0) - userCount === 1 ? '' : 's'} available.</p>`}
-      </div>
-
-      <div class="sub-tokens-card">
-        <div class="sub-status-header">
-          <h3>Access tokens</h3>
-          <button type="button" class="btn btn-ghost btn-sm" id="generateTokenBtn">Generate new token</button>
-        </div>
-        <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Tokens are used by new team members to create their accounts. Share a token with each person who needs access.</p>
-        <div id="tokenList" class="token-list"></div>
-      </div>
-    </div>
-  `;
-
-  loadTokens();
-
-  const genBtn = $("generateTokenBtn");
-  if (genBtn) genBtn.addEventListener("click", generateNewToken);
-}
-
-async function loadTokens() {
-  const listEl = $("tokenList");
-  if (!listEl || !me.subscriptionId) return;
-
-  try {
-    const tokensQuery = query(
-      collection(db, "tokens"),
-      where("subscriptionId", "==", me.subscriptionId)
-    );
-    const snap = await getDocs(tokensQuery);
-    const tokens = [];
-    snap.forEach((d) => tokens.push({ id: d.id, ...d.data() }));
-
-    if (tokens.length === 0) {
-      listEl.innerHTML = `<div class="empty" style="padding:20px">No tokens generated yet. Click "Generate new token" to create one.</div>`;
-      return;
-    }
-
-    listEl.innerHTML = tokens.map((t) => `
-      <div class="token-row">
-        <div class="token-info">
-          <code class="token-code">${esc(t.token)}</code>
-          <span class="pill ${t.redeemed ? 'green' : 'blue'}">${t.redeemed ? 'Used' : 'Available'}</span>
-        </div>
-        <div class="token-meta">
-          ${t.redeemed ? `<span>Used by ${esc(t.redeemedByEmail || 'user')} ${t.redeemedAt ? '· ' + new Date(t.redeemedAt).toLocaleDateString() : ''}</span>` : `<span>Created ${t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—'}</span>`}
-        </div>
-      </div>
-    `).join("");
-  } catch (err) {
-    listEl.innerHTML = `<div class="empty" style="padding:20px">Error loading tokens: ${esc(err.message)}</div>`;
-  }
-}
-
-async function generateNewToken() {
-  if (!isMaster() || !me.subscriptionId) return;
-
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let t = "AF-";
-  for (let i = 0; i < 12; i++) {
-    if (i > 0 && i % 4 === 0) t += "-";
-    t += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-
-  try {
-    await setDoc(doc(db, "tokens", t), {
-      token: t,
-      subscriptionId: me.subscriptionId,
-      tier: currentSubscription ? currentSubscription.tier : "starter",
-      tierLabel: currentSubscription ? (TIER_LABEL[currentSubscription.tier] || currentSubscription.tier) : "Starter",
-      maxUsers: currentSubscription ? currentSubscription.maxUsers : 5,
-      buyerEmail: me.email,
-      redeemed: false,
-      createdAt: Date.now()
-    });
-    toast("New token generated: " + t);
-    loadTokens();
-  } catch (err) {
-    toast("Error generating token: " + err.message, true);
-  }
-}
-
-function sendEmailViaEmailJS(templateId, params) {
-  if (typeof emailjs === 'undefined') {
-    console.warn('EmailJS SDK not loaded — email skipped');
-    return;
-  }
-  if (typeof EMAILJS_CONFIG === 'undefined' || !EMAILJS_CONFIG || EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY_HERE' || EMAILJS_CONFIG.serviceId === 'YOUR_SERVICE_ID_HERE') {
-    console.warn('EmailJS not configured — set up at js/email-config.js');
-    return;
-  }
-  emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
-  emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templates[templateId], {
-    ...params,
-    reply_to: EMAILJS_CONFIG.replyTo || params.to_email
-  }).then(() => {
-    console.log('Email sent: ' + templateId + ' → ' + params.to_email);
-  }).catch((err) => {
-    console.error('EmailJS error:', err);
-  });
-}
-
-function sendRedemptionEmail(email, name) {
-  if (!currentTokenData || !currentSubscription) return;
-  const sub = currentSubscription;
-  sendEmailViaEmailJS('welcome', {
-    to_email: email,
-    buyer_name: name,
-    plan_name: TIER_LABEL[sub.tier] || sub.tier,
-    access_token: currentTokenData.token,
-    max_users: String(sub.maxUsers || 0),
-    expiry_date: sub.expiresAt ? new Date(sub.expiresAt).toLocaleDateString() : 'N/A'
-  });
-}
-
-function sendTeamMemberEmail(email, name, role) {
-  sendEmailViaEmailJS('userWelcome', {
-    to_email: email,
-    user_name: name,
-    admin_name: me.name,
-    user_email: email,
-    user_role: role === 'office' ? 'Office Staff' : 'Technician'
-  });
 }
 
 init();

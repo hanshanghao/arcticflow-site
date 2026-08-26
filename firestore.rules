@@ -42,7 +42,8 @@ service cloud.firestore {
       allow update: if isMaster()
         || (isOffice()
             && request.resource.data.role == resource.data.role
-            && request.resource.data.isAdmin == resource.data.isAdmin);
+            && request.resource.data.isAdmin == resource.data.isAdmin
+            && request.resource.data.validUntil == resource.data.validUntil);
       allow delete: if isMaster();
     }
 
@@ -61,23 +62,15 @@ service cloud.firestore {
       allow delete: if isOffice();
     }
 
+    match /invoices/{invoiceId} {
+      allow read: if isOffice() || (isActive() && resource.data.assignedTo == request.auth.uid);
+      allow create: if isOffice();
+      allow update: if isOffice();
+      allow delete: if isOffice();
+    }
+
     match /counters/{docId} {
       allow read, write: if signedIn();
-    }
-
-    match /subscriptions/{subId} {
-      allow read: if isMaster();
-      allow create: if true;
-      allow update: if isMaster();
-      allow delete: if false;
-    }
-
-    match /tokens/{tokenId} {
-      allow read: if true;
-      allow create: if true;
-      allow update: if isMaster()
-        || (signedIn() && request.resource.data.redeemed == true && resource.data.redeemed == false);
-      allow delete: if false;
     }
   }
 }

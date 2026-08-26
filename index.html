@@ -33,35 +33,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script>
-if (typeof firebase !== 'undefined' && firebase.initializeApp) {
-  firebase.initializeApp({
-    apiKey: "AIzaSyAEFsWgGz5bnN4TA2udn-giyWfdjB5ogxo",
-    authDomain: "arcticflow-21jsh.firebaseapp.com",
-    projectId: "arcticflow-21jsh",
-    storageBucket: "arcticflow-21jsh.firebasestorage.app",
-    messagingSenderId: "257399877694",
-    appId: "1:257399877694:web:3b0d99be25e5c82a4da16f"
-  });
-}
-</script>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Arctic Flow",
-  "operatingSystem": "Android, iOS",
-  "applicationCategory": "BusinessApplication",
-  "description": "All-in-one app for air-conditioning contractors: daily job booking, crew scheduling, invoicing, online payments, post-job extra charges and complete data security.",
-  "offers": { "@type": "Offer", "price": "49.99", "priceCurrency": "USD", "priceValidUntil": "2026-12-31" },
-  "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "bestRating": "5" },
-  "author": { "@type": "Organization", "name": "Arctic Flow Inc.", "url": "https://www.arcticflow.app" }
-}
-</script>
 </head>
 <body>
 
@@ -88,7 +59,6 @@ if (typeof firebase !== 'undefined' && firebase.initializeApp) {
         <li><a href="#workflow">Workflow</a></li>
         <li><a href="#teams">Teams</a></li>
         <li><a href="#security">Security</a></li>
-        <li><a href="#pricing">Pricing</a></li>
         <li><a href="#reviews">Reviews</a></li>
       </ul>
     </nav>
@@ -106,24 +76,20 @@ if (typeof firebase !== 'undefined' && firebase.initializeApp) {
     <div class="hero-copy">
       <span class="hero-badge">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2v20M4 6l16 12M20 6L4 18"/></svg>
-        Subscription plans <b>&nbsp;now available</b>
+        Free for AC contractors
       </span>
       <h1>Your AC business,<br>in <span class="grad-text">perfect flow.</span></h1>
       <p class="hero-sub">Arctic Flow gives air-conditioning contractors one cool, connected platform for daily job booking, crew scheduling, instant invoicing, online payments and post-job extra charges — secured end to end.</p>
       <div class="store-row">
-        <a href="#pricing" class="store-btn" aria-label="Choose a subscription plan">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>
-          <span><small>Starting at</small><strong>$49.99/mo</strong></span>
-        </a>
         <a href="app.html" class="store-btn" aria-label="Sign in to the web app">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
           <span><small>Already have access?</small><strong>Sign in</strong></span>
         </a>
       </div>
       <div class="hero-stats">
-        <div class="stat"><b><span class="counter" data-count="3" data-suffix="">0</span></b><span>Plans available</span></div>
+        <div class="stat"><b><span class="counter" data-count="1" data-suffix="">0</span></b><span>Offline ready</span></div>
         <div class="stat"><b><span class="counter" data-count="4.9" data-decimals="1">0</span></b><span>Average rating</span></div>
-        <div class="stat"><b><span class="counter" data-count="14" data-suffix="">0</span></b><span>Day free trial</span></div>
+        <div class="stat"><b><span class="counter" data-count="1" data-suffix="">0</span></b><span>End-to-end encrypted</span></div>
         <div class="stat"><b><span class="counter" data-count="20" data-suffix="">0</span></b><span>Max team members</span></div>
       </div>
     </div>
@@ -396,100 +362,14 @@ if (typeof firebase !== 'undefined' && firebase.initializeApp) {
   </div>
 </section>
 
-<section id="pricing">
-  <div class="container">
-    <div class="section-head reveal">
-      <span class="kicker">Simple pricing</span>
-      <h2 class="section-title">Plans that grow <span class="grad-text">with your crew.</span></h2>
-      <p>Start free. Upgrade when your calendar fills up. Cancel anytime.</p>
-    </div>
-    <div class="plans-grid">
-      <article class="plan reveal" style="--d:0s" data-tier="starter">
-        <h3>Starter</h3>
-        <p class="plan-desc">For small teams getting started.</p>
-        <div class="price">$49.99<small>/month</small></div>
-        <p class="plan-users">Up to <strong>5 user</strong> accounts</p>
-        <ul>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Daily job scheduling &amp; dispatch</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Instant invoicing &amp; payments</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Post-job extra charges</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Offline mode &amp; auto-sync</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Email support</li>
-        </ul>
-        <div class="paypal-btn-wrap" id="paypal-starter"></div>
-        <p class="plan-note">Pay securely via PayPal</p>
-      </article>
-      <article class="plan popular reveal" style="--d:.1s" data-tier="growth">
-        <span class="plan-tag">Best value</span>
-        <h3>Growth</h3>
-        <p class="plan-desc">For growing companies.</p>
-        <div class="price">$249.99<small>/6 months</small></div>
-        <p class="plan-users">Up to <strong>10 user</strong> accounts</p>
-        <p class="plan-savings">Save ~$50 vs monthly billing</p>
-        <ul>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Everything in Starter</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>10 team accounts</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Unlimited jobs &amp; clients</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Team scheduling &amp; live visibility</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Priority support</li>
-        </ul>
-        <div class="paypal-btn-wrap" id="paypal-growth"></div>
-        <p class="plan-note">Pay securely via PayPal</p>
-      </article>
-      <article class="plan reveal" style="--d:.2s" data-tier="enterprise">
-        <h3>Enterprise</h3>
-        <p class="plan-desc">For multi-branch operations.</p>
-        <div class="price">$449.99<small>/year</small></div>
-        <p class="plan-users">Up to <strong>20 user</strong> accounts</p>
-        <p class="plan-savings">Save ~$150 vs monthly billing</p>
-        <ul>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Everything in Growth</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>20 team accounts</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Multi-branch dispatch</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Dedicated success manager</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>99.9% uptime SLA</li>
-        </ul>
-        <div class="paypal-btn-wrap" id="paypal-enterprise"></div>
-        <p class="plan-note">Pay securely via PayPal</p>
-      </article>
-    </div>
-    <div id="paymentSuccess" class="payment-success" hidden>
-      <div class="payment-success-card">
-        <div class="ps-icon" aria-hidden="true"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg></div>
-        <h3>Payment received!</h3>
-        <p>Your <strong id="psTier">—</strong> subscription is now active.</p>
-        <div class="ps-details">
-          <p><strong>Access token:</strong> <code id="psToken">—</code></p>
-          <p class="ps-note">Save this token — you'll need it to create your team accounts.</p>
-        </div>
-        <div class="ps-instructions">
-          <h4>Next steps</h4>
-          <ol>
-            <li>Check your email for full setup instructions.</li>
-            <li>Go to <a href="app.html">app.html</a> and enter your access token.</li>
-            <li>Create your master admin account.</li>
-            <li>Add team members from the Team &amp; Logins tab.</li>
-          </ol>
-        </div>
-        <div class="ps-actions">
-          <a href="app.html" class="btn btn-primary">Go to the app &rarr;</a>
-          <button type="button" class="btn btn-ghost" id="psClose">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <section id="download">
   <div class="container">
     <div class="cta-panel reveal">
       <h2>Ready to feel<br>the <span class="grad-text">flow?</span></h2>
-      <p>Join thousands of AC contractors running cooler, faster and smarter. Pick a plan above, pay via PayPal, and get your team set up in under ten minutes.</p>
+      <p>Join thousands of AC contractors running cooler, faster and smarter. Open the app and get your team set up in under ten minutes.</p>
       <div class="store-row" style="justify-content:center;margin-bottom:26px">
-        <a href="#pricing" class="btn btn-primary">Choose your plan</a>
-        <a href="app.html" class="btn btn-ghost">Already subscribed? Sign in</a>
+        <a href="app.html" class="btn btn-primary">Open the App</a>
       </div>
-      <p class="cta-note">Secure PayPal payments · Setup in minutes · Cancel anytime</p>
     </div>
   </div>
 </section>
@@ -517,7 +397,6 @@ if (typeof firebase !== 'undefined' && firebase.initializeApp) {
         <h4>Product</h4>
         <ul>
           <li><a href="#features">Features</a></li>
-          <li><a href="#pricing">Pricing</a></li>
           <li><a href="#">Changelog</a></li>
           <li><a href="#">Roadmap</a></li>
         </ul>
@@ -552,156 +431,6 @@ if (typeof firebase !== 'undefined' && firebase.initializeApp) {
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
 </button>
 
-<script src="https://www.paypal.com/sdk/js?client-id=AbZd528b-wWEccr5N7SHTZg-jKL1XmINe7cz8WxAs7T2yWbyeFdKZCdXAXNSdLau4Oh5ihCB29jItszi&currency=USD&intent=capture" data-sdk-integration-source="button-factory"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/email-config.js"></script>
 <script src="js/main.js" defer></script>
-<script>
-(function(){
-  var TIER_CONFIG = {
-    starter:   { label: 'Starter',   price: '49.99', maxUsers: 5, durationMonths: 1  },
-    growth:    { label: 'Growth',    price: '249.99', maxUsers: 10, durationMonths: 6  },
-    enterprise:{ label: 'Enterprise', price: '449.99', maxUsers: 20, durationMonths: 12 }
-  };
-
-  if (typeof paypal === 'undefined') {
-    document.querySelectorAll('.paypal-btn-wrap').forEach(function(w){
-      w.innerHTML = '<p style="font-size:.82rem;color:var(--muted);text-align:center;padding:14px 0">PayPal loading — add your client ID in index.html</p>';
-    });
-    return;
-  }
-
-  Object.keys(TIER_CONFIG).forEach(function(tier){
-    var cfg = TIER_CONFIG[tier];
-    var container = document.getElementById('paypal-' + tier);
-    if (!container) return;
-
-    paypal.Buttons({
-      style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay', height: 45 },
-      createOrder: function(data, actions) {
-        return actions.order.create({
-          purchase_units: [{
-            description: 'Arctic Flow — ' + cfg.label + ' Subscription (' + cfg.durationMonths + ' month' + (cfg.durationMonths > 1 ? 's' : '') + ')',
-            amount: { currency_code: 'USD', value: cfg.price }
-          }]
-        });
-      },
-      onApprove: function(data, actions) {
-        return actions.order.capture().then(function(details) {
-          handlePaymentSuccess(tier, cfg, details);
-        });
-      },
-      onError: function(err) {
-        console.error('PayPal error:', err);
-        alert('Payment failed. Please try again or contact support.');
-      }
-    }).render('#paypal-' + tier);
-  });
-
-  function generateToken() {
-    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    var t = 'AF-';
-    for (var i = 0; i < 12; i++) {
-      if (i > 0 && i % 4 === 0) t += '-';
-      t += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return t;
-  }
-
-  function handlePaymentSuccess(tier, cfg, details) {
-    var payer = details.payer || {};
-    var email = payer.email_address || '';
-    var name = (payer.name && payer.name.given_name) ? payer.name.given_name + ' ' + (payer.name.surname || '') : email;
-    var now = new Date();
-    var expires = new Date(now.getTime());
-    expires.setMonth(expires.getMonth() + cfg.durationMonths);
-
-    var token = generateToken();
-    var subId = 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
-
-    var subData = {
-      tier: tier,
-      tierLabel: cfg.label,
-      price: parseFloat(cfg.price),
-      currency: 'USD',
-      buyerEmail: email,
-      buyerName: name.trim(),
-      paypalOrderId: details.id || '',
-      maxUsers: cfg.maxUsers,
-      durationMonths: cfg.durationMonths,
-      createdAt: now.getTime(),
-      expiresAt: expires.getTime(),
-      active: true
-    };
-
-    var tokenData = {
-      token: token,
-      subscriptionId: subId,
-      tier: tier,
-      tierLabel: cfg.label,
-      maxUsers: cfg.maxUsers,
-      buyerEmail: email,
-      redeemed: false,
-      createdAt: now.getTime()
-    };
-
-    if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
-      var db = firebase.firestore();
-      db.collection('subscriptions').doc(subId).set(subData)
-        .then(function(){
-          return db.collection('tokens').doc(token).set(tokenData);
-        })
-        .then(function(){
-          showSuccess(tier, token, cfg);
-        })
-        .catch(function(err){
-          console.error('Firestore write error:', err);
-          showSuccess(tier, token, cfg);
-        });
-    } else {
-      localStorage.setItem('af_pending_sub_' + token, JSON.stringify({sub: subData, token: tokenData}));
-      showSuccess(tier, token, cfg);
-    }
-
-    sendPaymentEmail(email, name.trim(), tier, cfg, token, expires.getTime());
-  }
-
-  function showSuccess(tier, token, cfg) {
-    var el = document.getElementById('paymentSuccess');
-    document.getElementById('psTier').textContent = cfg.label;
-    document.getElementById('psToken').textContent = token;
-    el.hidden = false;
-    el.scrollIntoView({behavior:'smooth', block:'center'});
-  }
-
-  document.getElementById('psClose').addEventListener('click', function(){
-    document.getElementById('paymentSuccess').hidden = true;
-  });
-
-  function sendPaymentEmail(email, name, tier, cfg, token, expiresAt) {
-    if (typeof emailjs === 'undefined' || !EMAILJS_CONFIG || EMAILJS_CONFIG.publicKey === 'YOUR_PUBLIC_KEY_HERE' || EMAILJS_CONFIG.serviceId === 'YOUR_SERVICE_ID_HERE') {
-      console.log('EmailJS not configured — email skipped. Set up at js/email-config.js');
-      return;
-    }
-    var expiryDate = new Date(expiresAt).toLocaleDateString();
-    emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
-    emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templates.welcome, {
-      to_email: email,
-      buyer_name: name || email,
-      plan_name: cfg.label,
-      access_token: token,
-      max_users: String(cfg.maxUsers),
-      expiry_date: expiryDate,
-      price: '$' + cfg.price,
-      duration: cfg.durationMonths + ' month' + (cfg.durationMonths > 1 ? 's' : ''),
-      reply_to: EMAILJS_CONFIG.replyTo
-    }).then(function() {
-      console.log('Welcome email sent to ' + email);
-    }).catch(function(err) {
-      console.error('Email send failed:', err);
-    });
-  }
-})();
-</script>
 </body>
 </html>
