@@ -742,8 +742,8 @@ $("teamList").addEventListener("click", async (e) => {
     toast(authError(err.code), true);
   }
   btn.disabled = false;
-});
-
+  return;
+}
 const deleteBtn = e.target.closest("[data-delete-user]");
 if (deleteBtn) {
   const target = users[deleteBtn.dataset.deleteUser];
@@ -760,6 +760,7 @@ if (deleteBtn) {
   }
   deleteBtn.disabled = false;
 }
+});
 
 $("newUserBtn").addEventListener("click", openUserForm);
 
