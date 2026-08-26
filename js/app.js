@@ -73,10 +73,39 @@ let unsubs = [];
 let activeView = "schedule";
 let scheduleDate = todayStr();
 let allJobsStatusFilter = "";
+let hasUsersCache = null;
 const configured = FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).startsWith("PASTE_");
 const isOffice = () => !!me && (me.role === "office" || me.isAdmin === true);
 const isMaster = () => !!me && me.isAdmin === true;
 const initials = (n) => (n || "?").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function playNotifySound() {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + i * 0.12);
+      gain.gain.linearRampToValueAtTime(0.25, now + i * 0.12 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 0.4);
+    });
+  } catch (_) {}
+}
 
 function toast(msg, isErr) {
   const t = document.createElement("div");
@@ -115,11 +144,13 @@ function authError(code) {
 }
 
 async function init() {
-  if (!configured) {
+  const die = (msg) => {
     $("authLoading").hidden = true;
-    $("loginForm").hidden = true;
-    return;
-  }
+    $("loginForm").hidden = false;
+    toast(msg || "Failed to connect. Please refresh.", true);
+  };
+  if (!configured) { die("Firebase not configured."); return; }
+  const safetyTimer = setTimeout(() => die("Connection timed out. Check your network."), 15000);
   try {
     app = initializeApp(FIREBASE_CONFIG);
     auth = getAuth(app);
@@ -141,9 +172,9 @@ async function init() {
     $("authLoading").hidden = true;
 
     const usersSnap = await getDocs(collection(db, "users")).catch(() => null);
-    const hasUsers = usersSnap && !usersSnap.empty;
+    hasUsersCache = !!(usersSnap && !usersSnap.empty);
 
-    if (hasUsers) {
+    if (hasUsersCache) {
       $("loginForm").hidden = false;
       $("setupForm").hidden = true;
     } else {
@@ -167,7 +198,9 @@ async function init() {
       }
       enterApp();
     });
+    clearTimeout(safetyTimer);
   } catch (err) {
+    clearTimeout(safetyTimer);
     $("authLoading").hidden = true;
     $("loginForm").hidden = false;
     toast("Firebase init failed: " + err.message, true);
@@ -182,17 +215,14 @@ function showAuthScreen() {
   $("authScreen").hidden = false;
   $("setupForm").hidden = true;
   $("loginForm").hidden = true;
-  $("authLoading").hidden = false;
+  $("authLoading").hidden = true;
   document.title = "Arctic Flow — Field App";
 
-  getDocs(collection(db, "users")).catch(() => null).then((snap) => {
-    $("authLoading").hidden = true;
-    if (snap && !snap.empty) {
-      $("loginForm").hidden = false;
-    } else {
-      $("setupForm").hidden = false;
-    }
-  });
+  if (hasUsersCache) {
+    $("loginForm").hidden = false;
+  } else {
+    $("setupForm").hidden = false;
+  }
 }
 
 $("loginForm").addEventListener("submit", async (e) => {
@@ -284,9 +314,31 @@ function enterApp() {
   ensureExportButton();
 
   const jobsQ = isOffice() ? collection(db, "jobs") : query(collection(db, "jobs"), where("assignedTo", "==", me.id));
+  let prevJobsMap = {};
+  let firstJobsSnapshot = true;
   unsubs.push(onSnapshot(jobsQ, (snap) => {
-    jobs = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => String((a.date || "") + (a.time || "")).localeCompare(String((b.date || "") + (b.time || ""))));
+    const newJobs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    newJobs.sort((a, b) => String((a.date || "") + (a.time || "")).localeCompare(String((b.date || "") + (b.time || ""))));
+
+    if (!firstJobsSnapshot) {
+      const prevMap = prevJobsMap;
+      let soundPlayed = false;
+      for (const job of newJobs) {
+        const prev = prevMap[job.id];
+        if (!prev) {
+          if (job.assignedTo === me.id) { playNotifySound(); toast("New job assigned: " + (job.title || job.id)); soundPlayed = true; break; }
+        } else if (prev.status !== job.status) {
+          if (job.status === "in_progress") { playNotifySound(); toast((job.title || "Job") + " is now in progress."); soundPlayed = true; break; }
+          if (job.status === "completed") { playNotifySound(); toast((job.title || "Job") + " has been completed."); soundPlayed = true; break; }
+          if (job.status === "cancelled") { playNotifySound(); toast((job.title || "Job") + " has been cancelled."); soundPlayed = true; break; }
+        }
+      }
+    }
+    firstJobsSnapshot = false;
+    prevJobsMap = {};
+    newJobs.forEach((j) => { prevJobsMap[j.id] = j; });
+
+    jobs = newJobs;
     renderActiveView();
   }, (err) => toast(err.message, true)));
 
