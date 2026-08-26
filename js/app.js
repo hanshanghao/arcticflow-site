@@ -696,6 +696,7 @@ function renderTeam() {
         ${me.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-user="${u.id}">Edit</button>` : ""}
         ${me.isAdmin && u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-switch-role="${u.id}">${u.role === "office" ? "Make technician" : "Make office staff"}</button>` : ""}
         ${u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn ${u.active === false ? "btn-primary" : "btn-danger"} btn-sm" data-toggle-user="${u.id}">${u.active === false ? "Activate" : "Deactivate"}</button>` : ""}
+        ${me.isAdmin && u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn btn-danger btn-sm" data-delete-user="${u.id}">Delete</button>` : ""}
       </div>`;
       }).join("")
     : `<div class="empty">No team members yet.</div>`;
@@ -742,6 +743,23 @@ $("teamList").addEventListener("click", async (e) => {
   }
   btn.disabled = false;
 });
+
+const deleteBtn = e.target.closest("[data-delete-user]");
+if (deleteBtn) {
+  const target = users[deleteBtn.dataset.deleteUser];
+  if (!target) return;
+  if (!me.isAdmin) return toast("Only the master admin can delete accounts.", true);
+  if (target.isAdmin) return toast("Cannot delete the master admin account.", true);
+  if (!confirm("Permanently delete " + target.name + "'s account?\n\nThis cannot be undone. The user will be removed from the team and can no longer sign in.")) return;
+  deleteBtn.disabled = true;
+  try {
+    await deleteDoc(doc(db, "users", target.id));
+    toast(target.name + "'s account has been deleted.");
+  } catch (err) {
+    toast(authError(err.code), true);
+  }
+  deleteBtn.disabled = false;
+}
 
 $("newUserBtn").addEventListener("click", openUserForm);
 
