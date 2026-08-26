@@ -796,38 +796,38 @@ $("teamList").addEventListener("click", async (e) => {
     roleBtn.disabled = false;
     return;
   }
-  const btn = e.target.closest("[data-toggle-user]");
-  if (!btn) return;
-  const target = users[btn.dataset.toggleUser];
-  if (!target) return;
-  const makingInactive = target.active !== false;
-  if (!confirm((makingInactive ? "Deactivate " : "Reactivate ") + target.name + "'s login?")) return;
-  btn.disabled = true;
-  try {
-    await updateDoc(doc(db, "users", target.id), { active: !makingInactive });
-    toast(makingInactive ? "Login deactivated." : "Login reactivated.");
-  } catch (err) {
-    toast(authError(err.code), true);
+  const toggleBtn = e.target.closest("[data-toggle-user]");
+  if (toggleBtn) {
+    const target = users[toggleBtn.dataset.toggleUser];
+    if (!target) return;
+    const makingInactive = target.active !== false;
+    if (!confirm((makingInactive ? "Deactivate " : "Reactivate ") + target.name + "'s login?")) return;
+    toggleBtn.disabled = true;
+    try {
+      await updateDoc(doc(db, "users", target.id), { active: !makingInactive });
+      toast(makingInactive ? "Login deactivated." : "Login reactivated.");
+    } catch (err) {
+      toast(authError(err.code), true);
+    }
+    toggleBtn.disabled = false;
+    return;
   }
-  btn.disabled = false;
-  return;
-}
-const deleteBtn = e.target.closest("[data-delete-user]");
-if (deleteBtn) {
-  const target = users[deleteBtn.dataset.deleteUser];
-  if (!target) return;
-  if (!me.isAdmin) return toast("Only the master admin can delete accounts.", true);
-  if (target.isAdmin) return toast("Cannot delete the master admin account.", true);
-  if (!confirm("Permanently delete " + target.name + "'s account?\n\nThis cannot be undone. The user will be removed from the team and can no longer sign in.")) return;
-  deleteBtn.disabled = true;
-  try {
-    await deleteDoc(doc(db, "users", target.id));
-    toast(target.name + "'s account has been deleted.");
-  } catch (err) {
-    toast(authError(err.code), true);
+  const deleteBtn = e.target.closest("[data-delete-user]");
+  if (deleteBtn) {
+    const target = users[deleteBtn.dataset.deleteUser];
+    if (!target) return;
+    if (!me.isAdmin) return toast("Only the master admin can delete accounts.", true);
+    if (target.isAdmin) return toast("Cannot delete the master admin account.", true);
+    if (!confirm("Permanently delete " + target.name + "'s account?\n\nThis cannot be undone. The user will be removed from the team and can no longer sign in.")) return;
+    deleteBtn.disabled = true;
+    try {
+      await deleteDoc(doc(db, "users", target.id));
+      toast(target.name + "'s account has been deleted.");
+    } catch (err) {
+      toast(authError(err.code), true);
+    }
+    deleteBtn.disabled = false;
   }
-  deleteBtn.disabled = false;
-}
 });
 
 $("newUserBtn").addEventListener("click", openUserForm);
