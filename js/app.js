@@ -144,6 +144,7 @@ function authError(code) {
 }
 
 async function init() {
+  try { window.__afClearTimer(); } catch (_) {}
   const die = (msg) => {
     try { $("authLoading").hidden = true; } catch (_) {}
     try { $("loginForm").hidden = false; } catch (_) {}
