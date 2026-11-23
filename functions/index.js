@@ -29,7 +29,9 @@ exports.setUserPassword = onCall(async (request) => {
   try {
     await getAuth().updateUser(uid.trim(), { password });
   } catch (err) {
-    throw new HttpsError("internal", (err && err.message) || "Could not update password.");
+    const code = (err && err.code) ? String(err.code) : "";
+    const message = (err && err.message) ? String(err.message) : "Could not update password.";
+    throw new HttpsError("internal", code ? `${code}: ${message}` : message);
   }
 
   return { ok: true };

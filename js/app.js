@@ -1210,7 +1210,11 @@ function openPasswordModal(u) {
 
   const showError = (err) => {
     const el = $("passwordActionError");
-    el.textContent = authError(err && err.code ? err.code : err);
+    if (err && err.code === "functions/internal" && err.message) {
+      el.textContent = err.message;
+    } else {
+      el.textContent = authError(err && err.code ? err.code : err);
+    }
     el.hidden = false;
   };
 
@@ -1878,6 +1882,6 @@ if ("serviceWorker" in navigator) {
       refreshing = true;
       location.reload();
     });
-    navigator.serviceWorker.register("sw.js?v=18db3e8").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=diag1").catch(() => {});
   });
 }
