@@ -42,17 +42,13 @@ A real multi-device web app. Office staff get full schedule control; technicians
    - Secret: paste the entire JSON file contents
 3. Push any change to `firestore.rules` — rules deploy automatically.
 
-The same secret is used by `.github/workflows/deploy-functions.yml`.
-
 ### Getting the password function live
 
 The **Set new password directly** option uses the `setUserPassword` callable Cloud Function in `functions/`.
 
 1. Upgrade the Firebase project to the **Blaze plan** (required for Cloud Functions).
-2. Ensure the `FIREBASE_SERVICE_ACCOUNT` GitHub secret is set as above.
-3. Push a change under `functions/` — the function deploys automatically.
-
-Manual deploy:
+2. Install Firebase CLI and sign in: `npm install -g firebase-tools && firebase login`.
+3. From the repo root, deploy:
 
 ```bash
 cd functions
