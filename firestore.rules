@@ -24,19 +24,18 @@ service cloud.firestore {
     }
 
     function validWebBooking() {
-      let d = request.resource.data;
-      return d.keys().hasAll(['name', 'phone', 'service', 'area', 'message', 'preferredDate', 'preferredTime', 'status', 'source', 'createdAt'])
-        && d.keys().hasOnly(['name', 'phone', 'service', 'area', 'message', 'preferredDate', 'preferredTime', 'status', 'source', 'createdAt'])
-        && d.name is string && d.name.size() >= 2 && d.name.size() <= 120
-        && d.phone is string && d.phone.size() >= 9 && d.phone.size() <= 20
-        && d.service is string && d.service.size() >= 2 && d.service.size() <= 120
-        && d.area is string && d.area.size() >= 2 && d.area.size() <= 120
-        && d.message is string && d.message.size() <= 2000
-        && d.preferredDate is string && d.preferredDate.size() <= 10
-        && d.preferredTime is string && d.preferredTime.size() <= 5
-        && d.status == 'pending'
-        && d.source == 'website'
-        && d.createdAt == request.time;
+      return request.resource.data.keys().hasAll(['name', 'phone', 'service', 'area', 'message', 'preferredDate', 'preferredTime', 'status', 'source', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'phone', 'service', 'area', 'message', 'preferredDate', 'preferredTime', 'status', 'source', 'createdAt'])
+        && request.resource.data.name.matches('(?s).*') && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 120
+        && request.resource.data.phone.matches('(?s).*') && request.resource.data.phone.size() >= 9 && request.resource.data.phone.size() <= 20
+        && request.resource.data.service.matches('(?s).*') && request.resource.data.service.size() >= 2 && request.resource.data.service.size() <= 120
+        && request.resource.data.area.matches('(?s).*') && request.resource.data.area.size() >= 2 && request.resource.data.area.size() <= 120
+        && request.resource.data.message.matches('(?s).*') && request.resource.data.message.size() <= 2000
+        && request.resource.data.preferredDate.matches('(?s).*') && request.resource.data.preferredDate.size() <= 10
+        && request.resource.data.preferredTime.matches('(?s).*') && request.resource.data.preferredTime.size() <= 5
+        && request.resource.data.status == 'pending'
+        && request.resource.data.source == 'website'
+        && request.resource.data.createdAt == request.time;
     }
 
     match /settings/public {
