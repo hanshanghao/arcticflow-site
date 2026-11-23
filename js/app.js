@@ -71,6 +71,7 @@ let me = null;
 let users = {};
 let jobs = [];
 let webBookings = [];
+let webBookingSourceFilter = "all";
 let unsubs = [];
 let activeView = "schedule";
 let scheduleDate = todayStr();
@@ -376,7 +377,7 @@ function enterApp() {
         for (const b of incoming) {
           if (!prevWebBookings[b.id] && b.status === "pending") {
             playNotifySound();
-            toast("New website booking: " + (b.name || b.id));
+            toast("New " + sourceLabel(b) + " booking: " + (b.name || b.id));
             break;
           }
         }
@@ -767,16 +768,42 @@ function webBookingTime(b) {
   return fmtDateTime(ts);
 }
 
+function sourceLabel(b) {
+  const s = b.source || "website";
+  if (s === "zaza") return "Zaza";
+  if (s === "mozaz") return "Mozaz";
+  return "Website";
+}
+
+function sourcePillClass(b) {
+  const s = b.source || "website";
+  if (s === "zaza") return "blue";
+  if (s === "mozaz") return "violet";
+  return "gray";
+}
+
 function renderWebBookings() {
   if (!isOffice()) return;
   const rank = { pending: 0, confirmed: 1, declined: 2 };
   const stamp = (b) => (b.createdAt && typeof b.createdAt.toDate === "function" ? b.createdAt.toDate().getTime() : Number(b.createdAt) || 0);
-  const list = [...webBookings].sort((a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3) || stamp(b) - stamp(a));
+  const sourceEl = $("webBookingsSource");
+  const filter = sourceEl ? sourceEl.value : webBookingSourceFilter;
+  const all = [...webBookings].sort((a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3) || stamp(b) - stamp(a));
+  const list = all.filter((b) => filter === "all" || (b.source || "website") === filter);
   const pending = webBookings.filter((b) => b.status === "pending").length;
-  $("webBookingsCount").textContent = pending + " awaiting confirmation · " + webBookings.length + " total";
+  const zazaCount = webBookings.filter((b) => b.source === "zaza").length;
+  const mozazCount = webBookings.filter((b) => b.source === "mozaz").length;
+  $("webBookingsCount").textContent = `${pending} awaiting confirmation · ${webBookings.length} total · Zaza ${zazaCount} · Mozaz ${mozazCount}`;
+  if (sourceEl) {
+    const counts = { all: webBookings.length, zaza: zazaCount, mozaz: mozazCount, website: webBookings.filter((b) => !b.source || b.source === "website").length };
+    sourceEl.querySelectorAll("option").forEach((o) => {
+      const base = o.textContent.replace(/\s*\(\d+\)$/, "");
+      o.textContent = `${base} (${counts[o.value] ?? 0})`;
+    });
+  }
   $("webBookingsList").innerHTML = list.length
     ? list.map((b) => `
-      <article class="job-card" data-web-booking="${esc(b.id)}" tabindex="0" role="button" aria-label="Open website booking from ${esc(b.name || "customer")}">
+      <article class="job-card" data-web-booking="${esc(b.id)}" tabindex="0" role="button" aria-label="Open ${esc(sourceLabel(b))} booking from ${esc(b.name || "customer")}">
         <span class="job-time">${esc(webBookingTime(b))}</span>
         <div class="job-main">
           <p class="job-title">${esc(b.service || "Website enquiry")} · ${esc(b.name || "—")}</p>
@@ -784,10 +811,20 @@ function renderWebBookings() {
           <p class="job-meta">${b.message ? esc(b.message.length > 90 ? b.message.slice(0, 90) + "…" : b.message) : "No extra details"}</p>
         </div>
         <div class="job-side">
+          <span class="pill ${sourcePillClass(b)}">${esc(sourceLabel(b))}</span>
           <span class="pill ${b.status === "pending" ? "amber" : b.status === "confirmed" ? "green" : "gray"}">${esc(b.status || "pending")}</span>
         </div>
       </article>`).join("")
-    : `<div class="empty">No website bookings yet.<br>Requests submitted on the Zaza website appear here for confirmation and assignment.</div>`;
+    : `<div class="empty">No ${esc(sourceLabel({ source: filter === "all" ? "website" : filter }))} bookings yet.<br>Requests submitted on the Zaza and Mozaz websites appear here for confirmation and assignment.</div>`;
+}
+
+const webSourceSelect = $("webBookingsSource");
+if (webSourceSelect) {
+  webSourceSelect.value = webBookingSourceFilter;
+  webSourceSelect.addEventListener("change", () => {
+    webBookingSourceFilter = webSourceSelect.value;
+    renderWebBookings();
+  });
 }
 
 ["webBookingsList"].forEach((id) => {
@@ -811,12 +848,13 @@ function openWebBooking(id) {
   openModal(`
     <div class="detail-head">
       <div>
-        <h3>Website booking · ${esc(b.name || "customer")}</h3>
-        <p class="modal-sub">Submitted ${esc(webBookingTime(b))} · ${esc(b.status || "pending")}</p>
+        <h3>${esc(sourceLabel(b))} booking · ${esc(b.name || "customer")}</h3>
+        <p class="modal-sub">Submitted ${esc(webBookingTime(b))} · ${esc(sourceLabel(b))} · ${esc(b.status || "pending")}</p>
       </div>
       <button type="button" class="detail-close" data-close aria-label="Close">×</button>
     </div>
     <div class="meta-grid">
+      <div class="meta-cell"><small>Website</small><b>${esc(sourceLabel(b))}</b></div>
       <div class="meta-cell"><small>Service</small><b>${esc(b.service || "—")}</b></div>
       <div class="meta-cell"><small>Area</small><b>${esc(b.area || "—")}</b></div>
       <div class="meta-cell"><small>Preferred date</small><b>${esc(b.preferredDate || "Flexible")}</b></div>
@@ -920,7 +958,7 @@ function openWebBookingConfirm(b) {
       createdBy: me.id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      source: "website",
+      source: b.source || "website",
       webBookingId: b.id
     };
     try {
