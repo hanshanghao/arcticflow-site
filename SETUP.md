@@ -92,7 +92,7 @@ Only the master admin can manage passwords. Team members do not have a self-serv
    - **Send reset email** — Firebase emails a secure reset link to the user.
    - **Set new password directly** — enter a temporary password and share it privately.
 
-Direct password setting requires the `setUserPassword` Cloud Function to be deployed. The Firebase project must be on the Blaze plan.
+Direct password setting requires the secure PHP endpoint on the Zaza hosting account. Firebase can remain on the Spark plan.
 
 ---
 

@@ -42,20 +42,17 @@ A real multi-device web app. Office staff get full schedule control; technicians
    - Secret: paste the entire JSON file contents
 3. Push any change to `firestore.rules` — rules deploy automatically.
 
-### Getting the password function live
+### Getting direct password changes live
 
-The **Set new password directly** option uses the `setUserPassword` callable Cloud Function in `functions/`.
+The **Set new password directly** option uses a PHP endpoint on the existing Zaza hosting. Firebase stays on the Spark plan.
 
-1. Upgrade the Firebase project to the **Blaze plan** (required for Cloud Functions).
-2. Install Firebase CLI and sign in: `npm install -g firebase-tools && firebase login`.
-3. From the repo root, deploy:
+1. Upload `api/arcticflow-set-password.php` from the Zaza website files to `public_html/api/arcticflow-set-password.php`.
+2. Upload the Firebase service account JSON to a private folder outside the web root, for example `private/arcticflow-service-account.json`.
+3. The endpoint URL must be `https://zazaairconservices.com/api/arcticflow-set-password.php`.
+4. The server needs PHP 7.4+, cURL, OpenSSL, and outbound HTTPS access.
+5. Keep the service account JSON private. Never place it in a public folder or commit it.
 
-```bash
-cd functions
-npm install
-cd ..
-firebase deploy --only functions
-```
+The endpoint verifies the signed-in Firebase ID token, checks that the caller is an active master admin in Firestore, then updates the target user's Firebase Auth password.
 
 ### First run — master login
 
@@ -123,7 +120,7 @@ python3 -m http.server 8080
 ## Deploy to Firebase
 
 ```bash
-firebase deploy --only hosting,firestore:rules,functions
+firebase deploy --only firestore:rules
 ```
 
 ## Regenerating images

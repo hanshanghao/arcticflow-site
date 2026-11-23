@@ -42,10 +42,6 @@ import {
   initializeAppCheck,
   ReCaptchaV3Provider
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
-import {
-  getFunctions,
-  httpsCallable
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAEFsWgGz5bnN4TA2udn-giyWfdjB5ogxo",
   authDomain: "arcticflow-21jsh.firebaseapp.com",
@@ -55,6 +51,7 @@ const FIREBASE_CONFIG = {
   appId: "1:257399877694:web:3b0d99be25e5c82a4da16f"
 };
 
+const PASSWORD_ENDPOINT = "https://zazaairconservices.com/api/arcticflow-set-password.php";
 const RECAPTCHA_SITE_KEY = "";
 
 const $ = (id) => document.getElementById(id);
@@ -70,7 +67,7 @@ const STATUS_LABEL = { scheduled: "Scheduled", in_progress: "In progress", compl
 const STATUS_PILL = { scheduled: "blue", in_progress: "amber", completed: "green", cancelled: "rose", postponed: "gray", rescheduled: "violet" };
 const METHOD_LABEL = { card: "Card (online)", cash: "Cash", bank: "Bank transfer", wallet: "Digital wallet" };
 
-let app, auth, db, secondaryApp, secondaryAuth, functionsClient;
+let app, auth, db, secondaryApp, secondaryAuth;
 let me = null;
 let users = {};
 let jobs = [];
@@ -153,7 +150,7 @@ function authError(code) {
     "functions/permission-denied": "Only the master admin can do this.",
     "functions/unauthenticated": "Please sign in again.",
     "functions/invalid-argument": "Please check the details and try again.",
-    "functions/unavailable": "Password service is unavailable. Deploy the Cloud Function first.",
+    "functions/unavailable": "Password service is unavailable. Please try again.",
     "functions/internal": "Could not change the password. Please try again."
   })[code] || String(code || "Something went wrong.").replace("auth/", "").replace("functions/", "").replace(/-/g, " ");
 }
@@ -195,7 +192,6 @@ async function init() {
     }
     secondaryApp = initializeApp(FIREBASE_CONFIG, "secondary");
     secondaryAuth = getAuth(secondaryApp);
-    functionsClient = getFunctions(app, "asia-southeast1");
 
     if ($("forgotBtn")) $("forgotBtn").hidden = true;
 
@@ -1196,7 +1192,7 @@ function openPasswordModal(u) {
     </div>
     <div class="card-box">
       <div class="box-title">Option 2 — set a new password directly</div>
-      <p class="modal-sub">Instantly replaces the password. Requires the password Cloud Function to be deployed.</p>
+      <p class="modal-sub">Instantly replaces the password through the secure admin endpoint.</p>
       <form id="directPasswordForm">
         <label>New temporary password<input name="password" type="password" minlength="6" required autocomplete="new-password" placeholder="min 6 characters"></label>
         <p class="modal-sub">Share this password with the user privately.</p>
@@ -1210,7 +1206,7 @@ function openPasswordModal(u) {
 
   const showError = (err) => {
     const el = $("passwordActionError");
-    if (err && err.code === "functions/internal" && err.message) {
+    if (err && String(err.code || "").startsWith("php/") && err.message) {
       el.textContent = err.message;
     } else {
       el.textContent = authError(err && err.code ? err.code : err);
@@ -1246,8 +1242,21 @@ function openPasswordModal(u) {
     if (!confirm("Replace " + u.name + "'s password with the new one now?")) return;
     btn.disabled = true;
     try {
-      const setUserPassword = httpsCallable(functionsClient, "setUserPassword");
-      await setUserPassword({ uid: u.id, password });
+      if (!auth.currentUser) throw { code: "auth/requires-recent-login" };
+      const idToken = await auth.currentUser.getIdToken(true);
+      const response = await fetch(PASSWORD_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken, uid: u.id, password })
+      });
+      let result = null;
+      try { result = await response.json(); } catch (_) {}
+      if (!response.ok || !result || result.ok !== true) {
+        throw {
+          code: "php/" + ((result && result.code) || "request_failed"),
+          message: (result && result.message) || ("Server returned HTTP " + response.status)
+        };
+      }
       closeModal();
       toast("Password updated for " + u.name + ".");
     } catch (err) {
@@ -1882,6 +1891,6 @@ if ("serviceWorker" in navigator) {
       refreshing = true;
       location.reload();
     });
-    navigator.serviceWorker.register("sw.js?v=diag1").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=diag2").catch(() => {});
   });
 }

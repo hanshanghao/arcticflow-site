@@ -1,11 +1,11 @@
-const CACHE = "arcticflow-v28";
+const CACHE = "arcticflow-v29";
 const CORE = [
   "app.html",
   "index.html",
   "css/app.css",
   "css/style.css",
   "js/main.js",
-  "js/app.js?v=diag1",
+  "js/app.js?v=diag2",
   "images/favicon.svg",
   "images/icon-192.png",
   "images/icon-512.png",
