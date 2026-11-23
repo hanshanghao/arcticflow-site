@@ -1878,6 +1878,6 @@ if ("serviceWorker" in navigator) {
       refreshing = true;
       location.reload();
     });
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=18db3e8").catch(() => {});
   });
 }
