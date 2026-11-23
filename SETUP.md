@@ -32,7 +32,7 @@ Only the **master admin** can create team accounts.
    - **Role:**
      - **Technician** — sees only their assigned jobs
      - **Office staff** — sees the full schedule and all jobs
-   - **Valid until** — expiry date for their access (defaults to 30 days)
+   - **Valid until** — expiry date for their access (defaults to 30 days), or tick **Unlimited access** for no expiry
 5. Click **"Create login"**
 6. Share the email and password with the team member
 

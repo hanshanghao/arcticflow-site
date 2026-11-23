@@ -1289,6 +1289,10 @@ function openUserForm() {
             <option value="office">Office staff — full schedule access</option>
           </select>
         </label>
+        <label class="full" style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" name="unlimited" style="width:auto;margin-top:0">
+          Unlimited access
+        </label>
         <label class="full">Valid until
           <input type="date" name="validUntil" required value="${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}">
         </label>
@@ -1299,7 +1303,16 @@ function openUserForm() {
         <button type="submit" class="btn btn-primary">Create login</button>
       </div>
     </form>`);
-  $("userForm").addEventListener("submit", onCreateUser);
+  const form = $("userForm");
+  const unlimitedBox = form.querySelector('[name="unlimited"]');
+  const validUntilInput = form.querySelector('[name="validUntil"]');
+  const syncValidUntil = () => {
+    validUntilInput.disabled = unlimitedBox.checked;
+    validUntilInput.required = !unlimitedBox.checked;
+  };
+  unlimitedBox.addEventListener("change", syncValidUntil);
+  syncValidUntil();
+  form.addEventListener("submit", onCreateUser);
 }
 
 function openUserEditForm(u) {
@@ -1409,23 +1422,30 @@ async function onCreateUser(e) {
   f.querySelector('button[type="submit"]').disabled = true;
 
   try {
+    const unlimited = !!(f.unlimited && f.unlimited.checked);
+    let validUntilMs = null;
+    if (!unlimited) {
+      if (!f.validUntil.value) throw new Error("Choose a validity date or select Unlimited access.");
+      validUntilMs = new Date(f.validUntil.value + "T23:59:59").getTime();
+    }
+
     const cred = await createUserWithEmailAndPassword(secondaryAuth, f.email.value.trim(), f.password.value);
-    const validUntilMs = new Date(f.validUntil.value + "T23:59:59").getTime();
-    await setDoc(doc(db, "users", cred.user.uid), {
+    const profile = {
       name: f.name.value.trim(),
       email: f.email.value.trim(),
       role: f.role.value,
       isAdmin: false,
       active: true,
       createdBy: me.name,
-      createdAt: Date.now(),
-      validUntil: validUntilMs
-    });
+      createdAt: Date.now()
+    };
+    if (!unlimited) profile.validUntil = validUntilMs;
+    await setDoc(doc(db, "users", cred.user.uid), profile);
     await signOut(secondaryAuth);
     closeModal();
     toast("Login created for " + f.name.value.trim() + ".");
   } catch (err) {
-    errEl.textContent = authError(err.code);
+    errEl.textContent = err.code ? authError(err.code) : (err.message || "Could not create account.");
     errEl.hidden = false;
   }
   f.querySelector('button[type="submit"]').disabled = false;
@@ -1943,6 +1963,6 @@ if ("serviceWorker" in navigator) {
       refreshing = true;
       location.reload();
     });
-    navigator.serviceWorker.register("sw.js?v=diag4").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=diag5").catch(() => {});
   });
 }
