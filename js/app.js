@@ -75,6 +75,9 @@ let webBookingSourceFilter = "all";
 let unsubs = [];
 let activeView = "schedule";
 let scheduleDate = todayStr();
+let dateFilterMode = "day";
+let rangeStart = todayStr();
+let rangeEnd = todayStr();
 let allJobsStatusFilter = "";
 let hasUsersCache = null;
 const configured = FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).startsWith("PASTE_");
@@ -477,16 +480,67 @@ function jobCard(job) {
   });
 });
 
-function renderSchedule() {
-  $("dayPicker").value = scheduleDate;
-  const list = jobs.filter((j) => j.date === scheduleDate);
-  $("scheduleCount").textContent = fmtLongDate(scheduleDate) + " · " + list.length + " job" + (list.length === 1 ? "" : "s");
-  $("scheduleList").innerHTML = list.length
-    ? list.map(jobCard).join("")
-    : `<div class="empty">No jobs booked for ${esc(fmtLongDate(scheduleDate))}.<br>Use "+ New job" to book the first one.</div>`;
+function scheduleFilter() {
+  if (dateFilterMode === "range") {
+    const start = $("rangeStart").value || rangeStart;
+    const end = $("rangeEnd").value || rangeEnd;
+    const lo = start <= end ? start : end;
+    const hi = start <= end ? end : start;
+    return {
+      mode: "range",
+      start: lo,
+      end: hi,
+      jobs: jobs.filter((j) => j.date >= lo && j.date <= hi),
+      label: fmtDate(lo) + " – " + fmtDate(hi),
+      slug: lo + "_to_" + hi
+    };
+  }
+  return {
+    mode: "day",
+    start: scheduleDate,
+    end: scheduleDate,
+    jobs: jobs.filter((j) => j.date === scheduleDate),
+    label: fmtLongDate(scheduleDate),
+    slug: scheduleDate
+  };
 }
 
+function renderSchedule() {
+  const f = scheduleFilter();
+  const single = dateFilterMode !== "range";
+  $("dateMode").value = dateFilterMode;
+  $("dayPicker").value = scheduleDate;
+  $("dayPicker").hidden = !single;
+  $("dayPrev").hidden = !single;
+  $("dayNext").hidden = !single;
+  $("rangeStart").value = rangeStart;
+  $("rangeEnd").value = rangeEnd;
+  $("rangeStart").hidden = single;
+  $("rangeEnd").hidden = single;
+  $("rangeLabel").hidden = single;
+  const btn = $("exportDayBtn");
+  if (btn) {
+    btn.textContent = single ? "⬇ Export day" : "⬇ Export range";
+    btn.title = single ? "Export this day's jobs as an Excel spreadsheet" : "Export this date range's jobs as an Excel spreadsheet";
+  }
+  $("scheduleCount").textContent = f.label + " · " + f.jobs.length + " job" + (f.jobs.length === 1 ? "" : "s");
+  $("scheduleList").innerHTML = f.jobs.length
+    ? f.jobs.map(jobCard).join("")
+    : `<div class="empty">No jobs for ${esc(f.label)}.<br>Use "+ New job" to book the first one.</div>`;
+}
+
+$("dateMode").addEventListener("change", (e) => { dateFilterMode = e.target.value === "range" ? "range" : "day"; renderSchedule(); });
 $("dayPicker").addEventListener("change", (e) => { scheduleDate = e.target.value || todayStr(); renderSchedule(); });
+$("rangeStart").addEventListener("change", (e) => {
+  rangeStart = e.target.value || todayStr();
+  if (rangeStart > rangeEnd) rangeEnd = rangeStart;
+  renderSchedule();
+});
+$("rangeEnd").addEventListener("change", (e) => {
+  rangeEnd = e.target.value || todayStr();
+  if (rangeEnd < rangeStart) rangeStart = rangeEnd;
+  renderSchedule();
+});
 $("dayPrev").addEventListener("click", () => shiftDay(-1));
 $("dayNext").addEventListener("click", () => shiftDay(1));
 function shiftDay(n) {
@@ -679,13 +733,14 @@ function downloadBlob(name, blob) {
 
 function exportDailyJobs() {
   if (!isOffice()) return;
-  const dayJobs = jobs.filter((j) => j.date === scheduleDate);
+  const f = scheduleFilter();
+  const dayJobs = f.jobs;
   if (!dayJobs.length) {
-    toast("No jobs booked for " + fmtLongDate(scheduleDate) + " — nothing to export.", true);
+    toast("No jobs for " + f.label + " — nothing to export.", true);
     return;
   }
   const jobRows = [[
-    "Time", "Status", "Job", "Customer", "Phone", "Site address", "Technician",
+    "Date", "Time", "Status", "Job", "Customer", "Phone", "Site address", "Technician",
     "Assigned by", "Services", "Extra charges", "Subtotal ($)", "Discount ($)", "Total ($)",
     "Payment", "Invoice #", "Notes"
   ]];
@@ -694,6 +749,7 @@ function exportDailyJobs() {
     const t = totalsFor(j);
     dayTotal += t.total;
     jobRows.push([
+      j.date || "",
       j.time || "",
       STATUS_LABEL[j.status] || j.status || "",
       j.title || "",
@@ -712,7 +768,10 @@ function exportDailyJobs() {
       j.notes || ""
     ]);
   });
-  jobRows.push(["", "", "", "", "", "", "", "", "Day total (" + dayJobs.length + " job" + (dayJobs.length === 1 ? "" : "s") + ")", "", "", "", round2(dayTotal), "", ""]);
+  const totalRow = new Array(17).fill("");
+  totalRow[10] = (f.mode === "range" ? "Range total" : "Day total") + " (" + dayJobs.length + " job" + (dayJobs.length === 1 ? "" : "s") + ")";
+  totalRow[13] = round2(dayTotal);
+  jobRows.push(totalRow);
 
   const lineRows = [["Job date", "Time", "Job", "Customer", "Type", "Description", "Amount ($)", "Added by"]];
   dayJobs.forEach((j) => {
@@ -722,14 +781,14 @@ function exportDailyJobs() {
   });
 
   const bytes = buildXlsx([
-    { name: "Jobs " + scheduleDate, rows: jobRows, widths: [8, 12, 26, 22, 15, 34, 17, 16, 36, 36, 12, 12, 12, 22, 11, 40], styleRows: [0] },
+    { name: "Jobs " + f.slug, rows: jobRows, widths: [12, 8, 12, 26, 22, 15, 34, 17, 16, 36, 36, 12, 12, 12, 22, 11, 40], styleRows: [0] },
     { name: "Line items", rows: lineRows, widths: [12, 8, 26, 22, 9, 34, 12, 17], styleRows: [0] }
   ]);
   downloadBlob(
-    "arcticflow-jobs-" + scheduleDate + ".xlsx",
+    "arcticflow-jobs-" + f.slug + ".xlsx",
     new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
   );
-  toast(`Exported ${dayJobs.length} job${dayJobs.length === 1 ? "" : "s"} for ${fmtLongDate(scheduleDate)} as Excel.`);
+  toast(`Exported ${dayJobs.length} job${dayJobs.length === 1 ? "" : "s"} for ${f.label} as Excel.`);
 }
 
 function renderAllJobs() {

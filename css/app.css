@@ -68,6 +68,7 @@ h1,h2,h3{font-family:'Sora','Inter',sans-serif}
 }
 .input:focus,input:focus,textarea:focus,select:focus{border-color:var(--border-bright)}
 .input-date{width:auto;margin-top:0}
+.head-actions select{width:auto;margin-top:0}
 .form-error{color:var(--rose);font-size:.84rem;margin-bottom:12px;line-height:1.4}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;text-decoration:none;font-weight:600;font-size:.95rem;padding:12px 22px;border-radius:999px;transition:transform .15s ease,box-shadow .2s,opacity .2s}

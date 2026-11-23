@@ -105,10 +105,17 @@
           <p class="view-sub" id="scheduleCount"></p>
         </div>
         <div class="head-actions">
+          <select id="dateMode" class="input" aria-label="Date filter mode">
+            <option value="day">Single date</option>
+            <option value="range">Custom range</option>
+          </select>
           <button type="button" class="icon-btn" id="dayPrev" aria-label="Previous day">‹</button>
           <input type="date" id="dayPicker" class="input input-date">
           <button type="button" class="icon-btn" id="dayNext" aria-label="Next day">›</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="exportDayBtn" hidden title="Export this day's jobs as an Excel spreadsheet">⬇ Export day</button>
+          <input type="date" id="rangeStart" class="input input-date" hidden aria-label="Range start date">
+          <span id="rangeLabel" hidden>to</span>
+          <input type="date" id="rangeEnd" class="input input-date" hidden aria-label="Range end date">
+          <button type="button" class="btn btn-ghost btn-sm" id="exportDayBtn" hidden title="Export filtered jobs as an Excel spreadsheet">⬇ Export day</button>
           <button type="button" class="btn btn-primary btn-sm" id="newJobBtn">+ New job</button>
         </div>
       </div>
