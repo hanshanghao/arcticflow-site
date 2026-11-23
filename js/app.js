@@ -19,7 +19,10 @@ import {
   sendPasswordResetEmail,
   signOut,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  updateEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   initializeFirestore,
@@ -145,6 +148,8 @@ function authError(code) {
     "auth/too-many-requests": "Too many attempts. Try again later.",
     "auth/email-already-in-use": "That email already has an account.",
     "auth/weak-password": "Password must be at least 6 characters.",
+    "auth/invalid-email": "Enter a valid email address.",
+    "auth/requires-recent-login": "Please sign in again before changing your email.",
     "auth/network-request-failed": "Network error. Check your connection.",
     "permission-denied": "Permission denied. Make sure firestore.rules are deployed.",
     "functions/permission-denied": "Only the master admin can do this.",
@@ -286,8 +291,7 @@ $("setupForm").addEventListener("submit", async (e) => {
       isAdmin: true,
       active: true,
       createdBy: "system",
-      createdAt: Date.now(),
-      validUntil: Date.now() + (365 * 24 * 60 * 60 * 1000)
+      createdAt: Date.now()
     });
     await setDoc(doc(db, "settings", "public"), { initialized: true }).catch(() => {});
   } catch (err) {
@@ -1090,6 +1094,8 @@ function renderTeam() {
           } else {
             validInfo = `<p class="meta" style="color:var(--rose)">Expired — contact admin to extend</p>`;
           }
+        } else if (u.isAdmin) {
+          validInfo = `<p class="meta">Unlimited access</p>`;
         }
         return `
       <div class="team-row">
@@ -1300,13 +1306,20 @@ function openUserEditForm(u) {
   const canRole = !u.isAdmin && u.id !== me.id;
   const canActive = !u.isAdmin && u.id !== me.id;
   const canValidUntil = me.isAdmin;
+  const canEditEmail = me.isAdmin && u.id === me.id && !!auth.currentUser;
   const validUntilValue = u.validUntil ? new Date(u.validUntil).toISOString().slice(0, 10) : "";
+  const editSubtitle = canEditEmail
+    ? "Changes apply instantly. You can update your own name, sign-in email, and validity. Changing your email requires your current password."
+    : "Changes apply instantly. The sign-in email is managed by Firebase and cannot be changed here — jobs and invoice history stay linked to this account.";
   openModal(`
     <h3>Edit account</h3>
-    <p class="modal-sub">Changes apply instantly. The sign-in email is managed by Firebase and cannot be changed here — jobs and invoice history stay linked to this account.</p>
+    <p class="modal-sub">${editSubtitle}</p>
     <form id="editUserForm">
       <label>Full name<input name="name" required value="${esc(u.name)}" placeholder="e.g. Marcus Kane"></label>
-      <label>Sign-in email (read-only)<input value="${esc(u.email || "")}" disabled></label>
+      ${canEditEmail ? `
+      <label>Sign-in email<input type="email" name="email" required value="${esc(u.email || "")}"></label>
+      <label>Current password (required only if changing email)<input name="currentPassword" type="password" autocomplete="current-password" placeholder="Your current password"></label>` : `
+      <label>Sign-in email (read-only)<input value="${esc(u.email || "")}" disabled></label>`}
       ${canRole ? `
       <label>Account type
         <select name="role">
@@ -1320,31 +1333,70 @@ function openUserEditForm(u) {
         Login active
       </label>` : ""}
       ${canValidUntil ? `
-      <label>Valid until<input type="date" name="validUntil" value="${esc(validUntilValue)}"></label>` : ""}
+      <label style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" name="unlimited" style="width:auto;margin-top:0" ${u.validUntil ? "" : "checked"}>
+        Unlimited access
+      </label>
+      <label>Valid until<input type="date" name="validUntil" value="${esc(validUntilValue)}" ${u.validUntil ? "" : "disabled"}></label>` : ""}
       <p id="editUserError" class="form-error" hidden></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" data-close>Cancel</button>
         <button type="submit" class="btn btn-primary">Save changes</button>
       </div>
     </form>`);
+  const unlimitedBox = $("editUserForm").querySelector('[name="unlimited"]');
+  const validUntilInput = $("editUserForm").querySelector('[name="validUntil"]');
+  if (unlimitedBox && validUntilInput) {
+    const syncValidUntil = () => { validUntilInput.disabled = unlimitedBox.checked; };
+    unlimitedBox.addEventListener("change", syncValidUntil);
+    syncValidUntil();
+  }
+
   $("editUserForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.target;
-    if (!f.name.value.trim()) return toast("Name cannot be empty.", true);
+    const showEditError = (message) => {
+      const el = $("editUserError");
+      el.textContent = message;
+      el.hidden = false;
+    };
+
+    if (!f.name.value.trim()) return showEditError("Name cannot be empty.");
     const patch = { name: f.name.value.trim() };
+    let emailChanged = false;
+
+    if (canEditEmail) {
+      const nextEmail = f.email.value.trim();
+      if (!nextEmail) return showEditError("Enter a valid email address.");
+      emailChanged = nextEmail.toLowerCase() !== String(auth.currentUser.email || "").toLowerCase();
+      if (emailChanged && !f.currentPassword.value) {
+        return showEditError("Enter your current password to change your email.");
+      }
+      if (emailChanged) patch.email = nextEmail;
+    }
+
     if (canRole) patch.role = f.role.value;
     if (canActive) patch.active = f.active.checked;
-    if (canValidUntil && f.validUntil.value) {
-      patch.validUntil = new Date(f.validUntil.value + "T23:59:59").getTime();
+    if (canValidUntil) {
+      if (f.unlimited && f.unlimited.checked) {
+        patch.validUntil = null;
+      } else if (f.validUntil.value) {
+        patch.validUntil = new Date(f.validUntil.value + "T23:59:59").getTime();
+      }
     }
+
     try {
+      if (emailChanged) {
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, f.currentPassword.value);
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        await updateEmail(auth.currentUser, patch.email);
+      }
       await updateDoc(doc(db, "users", u.id), patch);
+      if (emailChanged) me.email = patch.email;
       toast("Account updated.");
       closeModal();
     } catch (err) {
-      const errEl = $("editUserError");
-      errEl.textContent = authError(err.code);
-      errEl.hidden = false;
+      showEditError(err.code ? authError(err.code) : (err.message || "Could not update account."));
     }
   });
 }
@@ -1891,6 +1943,6 @@ if ("serviceWorker" in navigator) {
       refreshing = true;
       location.reload();
     });
-    navigator.serviceWorker.register("sw.js?v=diag2").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=diag4").catch(() => {});
   });
 }

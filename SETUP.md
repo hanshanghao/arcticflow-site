@@ -2,7 +2,7 @@
 
 ## Overview
 
-Arctic Flow is a free web app for air-conditioning contractors. The master admin creates team accounts with a validity period. No payment required.
+Arctic Flow is a free web app for air-conditioning contractors. The master admin has unlimited access by default; team accounts can have a validity period. No payment required.
 
 ---
 
@@ -12,7 +12,7 @@ Arctic Flow is a free web app for air-conditioning contractors. The master admin
 2. If no accounts exist, you'll see the **"Create admin account"** form
 3. Enter your name, email, and password
 4. Click **"Create admin account"**
-5. You are now the **master admin** with full control
+5. You are now the **master admin** with full control and unlimited access by default
 
 If the setup form doesn't appear, create the first user directly in the [Firebase Console](https://console.firebase.google.com) → Firestore → `users` collection.
 
@@ -72,6 +72,7 @@ The master admin account (first account created) has full control:
 - **Create/delete team accounts**
 - **Change roles** (office ↔ technician)
 - **Set/extend validity periods** for each user
+- **Edit own profile** (name, sign-in email with current password, and unlimited/limited validity)
 - **Deactivate accounts** (immediate lockout)
 - **Reset user passwords by email or set a new password instantly**
 - **View all jobs and invoices**
@@ -80,6 +81,8 @@ The master admin account (first account created) has full control:
 - **Remain hidden from all other accounts**
 
 Only the master admin can manage passwords. Team members do not have a self-service forgot-password option; ask the master admin to reset or change it.
+
+Master admin accounts have unlimited access unless a validity date is explicitly set. To restore unlimited access, edit the account and tick **Unlimited access**.
 
 ---
 
