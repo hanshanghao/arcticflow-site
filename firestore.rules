@@ -50,15 +50,10 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if signedIn();
-      allow create: if !signedIn() || isOffice()
-        || (request.auth.uid == uid && request.resource.data.isAdmin != true)
-        || (request.auth.uid == uid && bootstrapEra());
-      allow update: if isMaster()
-        || (isOffice()
-            && request.resource.data.role == resource.data.role
-            && request.resource.data.isAdmin == resource.data.isAdmin
-            && request.resource.data.validUntil == resource.data.validUntil);
+      allow read: if signedIn() && (!resource.data.get('isAdmin', false) || isMaster());
+      allow create: if isMaster()
+        || (signedIn() && request.auth.uid == uid && bootstrapEra());
+      allow update: if isMaster();
       allow delete: if isMaster();
     }
 
@@ -74,21 +69,21 @@ service cloud.firestore {
             && request.resource.data.technicianName == resource.data.technicianName
             && request.resource.data.assignedByName == resource.data.assignedByName);
 
-      allow delete: if isOffice();
+      allow delete: if isMaster();
     }
 
     match /invoices/{invoiceId} {
       allow read: if isOffice() || (isActive() && resource.data.assignedTo == request.auth.uid);
       allow create: if isOffice();
       allow update: if isOffice();
-      allow delete: if isOffice();
+      allow delete: if isMaster();
     }
 
     match /webBookings/{bookingId} {
       allow read: if isOffice();
       allow create: if validWebBooking();
-      allow update: if isOffice();
-      allow delete: if isOffice();
+      allow update: if isMaster() || (isOffice() && !resource.data.get('temporarilyDeleted', false));
+      allow delete: if isMaster();
     }
 
     match /counters/{docId} {

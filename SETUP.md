@@ -73,8 +73,34 @@ The master admin account (first account created) has full control:
 - **Change roles** (office ↔ technician)
 - **Set/extend validity periods** for each user
 - **Deactivate accounts** (immediate lockout)
+- **Reset user passwords by email or set a new password instantly**
 - **View all jobs and invoices**
-- **Book/edit/delete any job**
+- **Book/edit/delete any job or booking record**
+- **View, restore or permanently delete temporarily removed bookings**
+- **Remain hidden from all other accounts**
+
+Only the master admin can manage passwords. Team members do not have a self-service forgot-password option; ask the master admin to reset or change it.
+
+---
+
+## Password Management
+
+1. Sign in as the master admin.
+2. Go to **Team & Logins**.
+3. Click **Password** next to the user.
+4. Choose either:
+   - **Send reset email** — Firebase emails a secure reset link to the user.
+   - **Set new password directly** — enter a temporary password and share it privately.
+
+Direct password setting requires the `setUserPassword` Cloud Function to be deployed. The Firebase project must be on the Blaze plan.
+
+---
+
+## Booking Deletion
+
+Office staff can use **Remove temporarily** on a web booking. It disappears from the office list but stays in the database.
+
+The master admin still sees temporarily removed bookings, with the staff member and removal time shown. The master admin can **Restore booking** or **Delete permanently**.
 
 ---
 

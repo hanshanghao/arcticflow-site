@@ -42,6 +42,10 @@ import {
   initializeAppCheck,
   ReCaptchaV3Provider
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
+import {
+  getFunctions,
+  httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAEFsWgGz5bnN4TA2udn-giyWfdjB5ogxo",
   authDomain: "arcticflow-21jsh.firebaseapp.com",
@@ -66,7 +70,7 @@ const STATUS_LABEL = { scheduled: "Scheduled", in_progress: "In progress", compl
 const STATUS_PILL = { scheduled: "blue", in_progress: "amber", completed: "green", cancelled: "rose", postponed: "gray", rescheduled: "violet" };
 const METHOD_LABEL = { card: "Card (online)", cash: "Cash", bank: "Bank transfer", wallet: "Digital wallet" };
 
-let app, auth, db, secondaryApp, secondaryAuth;
+let app, auth, db, secondaryApp, secondaryAuth, functionsClient;
 let me = null;
 let users = {};
 let jobs = [];
@@ -145,8 +149,13 @@ function authError(code) {
     "auth/email-already-in-use": "That email already has an account.",
     "auth/weak-password": "Password must be at least 6 characters.",
     "auth/network-request-failed": "Network error. Check your connection.",
-    "permission-denied": "Permission denied. Make sure firestore.rules are deployed."
-  })[code] || String(code || "Something went wrong.").replace("auth/", "").replace(/-/g, " ");
+    "permission-denied": "Permission denied. Make sure firestore.rules are deployed.",
+    "functions/permission-denied": "Only the master admin can do this.",
+    "functions/unauthenticated": "Please sign in again.",
+    "functions/invalid-argument": "Please check the details and try again.",
+    "functions/unavailable": "Password service is unavailable. Deploy the Cloud Function first.",
+    "functions/internal": "Could not change the password. Please try again."
+  })[code] || String(code || "Something went wrong.").replace("auth/", "").replace("functions/", "").replace(/-/g, " ");
 }
 
 async function init() {
@@ -186,6 +195,9 @@ async function init() {
     }
     secondaryApp = initializeApp(FIREBASE_CONFIG, "secondary");
     secondaryAuth = getAuth(secondaryApp);
+    functionsClient = getFunctions(app, "asia-southeast1");
+
+    if ($("forgotBtn")) $("forgotBtn").hidden = true;
 
     try {
       const settingsSnap = await getDoc(doc(db, "settings", "public")).catch(() => null);
@@ -261,17 +273,6 @@ $("loginForm").addEventListener("submit", async (e) => {
     $("loginError").hidden = false;
   }
   btn.disabled = false;
-});
-
-$("forgotBtn").addEventListener("click", async () => {
-  const email = $("loginForm").email.value.trim();
-  if (!email) return toast("Type your email first, then tap forgot password.", true);
-  try {
-    await sendPasswordResetEmail(auth, email);
-    toast("Password reset email sent.");
-  } catch (err) {
-    toast(authError(err.code), true);
-  }
 });
 
 $("setupForm").addEventListener("submit", async (e) => {
@@ -366,7 +367,8 @@ function enterApp() {
   }, (err) => toast(err.message, true)));
 
   if (isOffice()) {
-    unsubs.push(onSnapshot(collection(db, "users"), (snap) => {
+    const usersQuery = isMaster() ? collection(db, "users") : query(collection(db, "users"), where("isAdmin", "==", false));
+    unsubs.push(onSnapshot(usersQuery, (snap) => {
       users = {};
       snap.docs.forEach((d) => { users[d.id] = { id: d.id, ...d.data() }; });
       renderActiveView();
@@ -847,14 +849,16 @@ function renderWebBookings() {
   const stamp = (b) => (b.createdAt && typeof b.createdAt.toDate === "function" ? b.createdAt.toDate().getTime() : Number(b.createdAt) || 0);
   const sourceEl = $("webBookingsSource");
   const filter = sourceEl ? sourceEl.value : webBookingSourceFilter;
-  const all = [...webBookings].sort((a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3) || stamp(b) - stamp(a));
+  const visible = isMaster() ? [...webBookings] : webBookings.filter((b) => b.temporarilyDeleted !== true);
+  const all = visible.sort((a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3) || stamp(b) - stamp(a));
   const list = all.filter((b) => filter === "all" || (b.source || "website") === filter);
-  const pending = webBookings.filter((b) => b.status === "pending").length;
-  const zazaCount = webBookings.filter((b) => b.source === "zaza").length;
-  const mozazCount = webBookings.filter((b) => b.source === "mozaz").length;
-  $("webBookingsCount").textContent = `${pending} awaiting confirmation · ${webBookings.length} total · Zaza ${zazaCount} · Mozaz ${mozazCount}`;
+  const hiddenCount = webBookings.filter((b) => b.temporarilyDeleted === true).length;
+  const pending = visible.filter((b) => b.status === "pending").length;
+  const zazaCount = visible.filter((b) => b.source === "zaza").length;
+  const mozazCount = visible.filter((b) => b.source === "mozaz").length;
+  $("webBookingsCount").textContent = `${pending} awaiting confirmation · ${visible.length} total · Zaza ${zazaCount} · Mozaz ${mozazCount}` + (isMaster() && hiddenCount ? ` · ${hiddenCount} temporarily removed` : "");
   if (sourceEl) {
-    const counts = { all: webBookings.length, zaza: zazaCount, mozaz: mozazCount, website: webBookings.filter((b) => !b.source || b.source === "website").length };
+    const counts = { all: visible.length, zaza: zazaCount, mozaz: mozazCount, website: visible.filter((b) => !b.source || b.source === "website").length };
     sourceEl.querySelectorAll("option").forEach((o) => {
       const base = o.textContent.replace(/\s*\(\d+\)$/, "");
       o.textContent = `${base} (${counts[o.value] ?? 0})`;
@@ -872,6 +876,7 @@ function renderWebBookings() {
         <div class="job-side">
           <span class="pill ${sourcePillClass(b)}">${esc(sourceLabel(b))}</span>
           <span class="pill ${b.status === "pending" ? "amber" : b.status === "confirmed" ? "green" : "gray"}">${esc(b.status || "pending")}</span>
+          ${b.temporarilyDeleted === true ? `<span class="pill rose">Removed</span>` : ""}
         </div>
       </article>`).join("")
     : `<div class="empty">No ${esc(sourceLabel({ source: filter === "all" ? "website" : filter }))} bookings yet.<br>Requests submitted on the Zaza and Mozaz websites appear here for confirmation and assignment.</div>`;
@@ -904,6 +909,8 @@ function openWebBooking(id) {
   const b = webBookings.find((x) => x.id === id);
   if (!b || !isOffice()) return;
   const pending = !b.status || b.status === "pending";
+  const deleted = b.temporarilyDeleted === true;
+  const canMaster = isMaster();
   openModal(`
     <div class="detail-head">
       <div>
@@ -926,13 +933,18 @@ function openWebBooking(id) {
       <div class="cust-line">📍 ${esc(b.area || "—")}</div>
     </div>
     ${b.message ? `<div class="card-box"><div class="box-title">Request details</div><p style="font-size:.88rem;color:var(--muted);line-height:1.55;white-space:pre-wrap">${esc(b.message)}</p></div>` : ""}
-    ${pending
-      ? `<div class="action-row">
-          <button type="button" class="btn btn-primary btn-sm" data-wb-act="confirm">Confirm &amp; assign</button>
-          <button type="button" class="btn btn-ghost btn-sm" data-wb-act="decline">Decline</button>
-          <button type="button" class="btn btn-danger btn-sm" data-wb-act="delete">Delete</button>
-        </div>`
-      : `<p class="modal-sub">${b.jobId ? "Confirmed and dispatched as a job." : "This request has been closed."}</p>`}`);
+    ${deleted ? `<div class="card-box"><div class="box-title">Temporarily removed</div><p class="modal-sub">Removed by ${esc(b.temporarilyDeletedBy || "office staff")} on ${esc(fmtDateTime(b.temporarilyDeletedAt))}. Only the master admin can still see this record.</p></div>` : ""}
+    ${!deleted && !pending ? `<p class="modal-sub">${b.jobId ? "Confirmed and dispatched as a job." : "This request has been closed."}</p>` : ""}
+    ${!deleted || canMaster ? `<div class="action-row">
+        ${pending && !deleted ? `<button type="button" class="btn btn-primary btn-sm" data-wb-act="confirm">Confirm &amp; assign</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-wb-act="decline">Decline</button>` : ""}
+        ${deleted
+          ? `<button type="button" class="btn btn-primary btn-sm" data-wb-act="restore">Restore booking</button>
+             <button type="button" class="btn btn-danger btn-sm" data-wb-act="delete">Delete permanently</button>`
+          : canMaster
+            ? `<button type="button" class="btn btn-danger btn-sm" data-wb-act="delete">Delete permanently</button>`
+            : `<button type="button" class="btn btn-danger btn-sm" data-wb-act="soft-delete">Remove temporarily</button>`}
+      </div>` : ""}`);
 
   const on = (sel, fn) => {
     const el = $("modalBox").querySelector(sel);
@@ -947,7 +959,33 @@ function openWebBooking(id) {
       toast("Website booking declined.");
     } catch (err) { toast(authError(err.code), true); }
   });
+  on('[data-wb-act="soft-delete"]', async () => {
+    if (isMaster()) return toast("Master admin should use permanent delete or restore.", true);
+    if (!confirm("Remove this booking from the office list?\n\nThe master admin can still see and restore it.")) return;
+    try {
+      await updateDoc(doc(db, "webBookings", b.id), {
+        temporarilyDeleted: true,
+        temporarilyDeletedBy: me.name,
+        temporarilyDeletedAt: Date.now()
+      });
+      closeModal();
+      toast("Booking removed from the office list.");
+    } catch (err) { toast(authError(err.code), true); }
+  });
+  on('[data-wb-act="restore"]', async () => {
+    if (!isMaster()) return toast("Only the master admin can restore bookings.", true);
+    try {
+      await updateDoc(doc(db, "webBookings", b.id), {
+        temporarilyDeleted: false,
+        restoredBy: me.name,
+        restoredAt: Date.now()
+      });
+      closeModal();
+      toast("Booking restored to the office list.");
+    } catch (err) { toast(authError(err.code), true); }
+  });
   on('[data-wb-act="delete"]', async () => {
+    if (!isMaster()) return toast("Only the master admin can permanently delete bookings.", true);
     if (!confirm("Permanently delete this website booking? This cannot be undone.")) return;
     try {
       await deleteDoc(doc(db, "webBookings", b.id));
@@ -1041,7 +1079,10 @@ function openWebBookingConfirm(b) {
 }
 
 function renderTeam() {
-  const list = Object.values(users).sort((a, b) => (Number(b.isAdmin) - Number(a.isAdmin)) || String(a.name).localeCompare(String(b.name)));
+  if ($("newUserBtn")) $("newUserBtn").hidden = !isMaster();
+  const list = Object.values(users)
+    .filter((u) => isMaster() || !u.isAdmin)
+    .sort((a, b) => (Number(b.isAdmin) - Number(a.isAdmin)) || String(a.name).localeCompare(String(b.name)));
   $("teamList").innerHTML = list.length
     ? list.map((u, i) => {
         let validInfo = "";
@@ -1061,13 +1102,14 @@ function renderTeam() {
           <strong>${esc(u.name)}${u.id === me.id ? " (you)" : ""}</strong>
           <p>${esc(u.email)}</p>
           ${validInfo}
-          ${u.createdBy && u.createdBy !== "system" ? `<p>Created by ${esc(u.createdBy)}</p>` : ""}
+          ${isMaster() && u.createdBy && u.createdBy !== "system" ? `<p>Created by ${esc(u.createdBy)}</p>` : ""}
         </div>
         <span class="tag ${u.isAdmin ? "office" : "tech"}">${u.isAdmin ? "Master admin" : u.role === "office" ? "Office staff" : "Technician"}</span>
         <span class="tag ${u.active === false ? "inactive" : ""}">${u.active === false ? "Deactivated" : "Active"}</span>
         ${me.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-user="${u.id}">Edit</button>` : ""}
+        ${me.isAdmin && u.id !== me.id ? `<button type="button" class="btn btn-ghost btn-sm" data-reset-password="${u.id}">Password</button>` : ""}
         ${me.isAdmin && u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn btn-ghost btn-sm" data-switch-role="${u.id}">${u.role === "office" ? "Make technician" : "Make office staff"}</button>` : ""}
-        ${u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn ${u.active === false ? "btn-primary" : "btn-danger"} btn-sm" data-toggle-user="${u.id}">${u.active === false ? "Activate" : "Deactivate"}</button>` : ""}
+        ${me.isAdmin && u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn ${u.active === false ? "btn-primary" : "btn-danger"} btn-sm" data-toggle-user="${u.id}">${u.active === false ? "Activate" : "Deactivate"}</button>` : ""}
         ${me.isAdmin && u.id !== me.id && !u.isAdmin ? `<button type="button" class="btn btn-danger btn-sm" data-delete-user="${u.id}">Delete</button>` : ""}
       </div>`;
       }).join("")
@@ -1081,6 +1123,14 @@ $("teamList").addEventListener("click", async (e) => {
     if (!target) return;
     if (!me.isAdmin) return toast("Only the master admin can edit accounts.", true);
     openUserEditForm(target);
+    return;
+  }
+  const pwBtn = e.target.closest("[data-reset-password]");
+  if (pwBtn) {
+    const target = users[pwBtn.dataset.resetPassword];
+    if (!target) return;
+    if (!isMaster()) return toast("Only the master admin can manage passwords.", true);
+    openPasswordModal(target);
     return;
   }
   const roleBtn = e.target.closest("[data-switch-role]");
@@ -1133,6 +1183,75 @@ $("teamList").addEventListener("click", async (e) => {
     deleteBtn.disabled = false;
   }
 });
+
+function openPasswordModal(u) {
+  const email = (u.email || "").trim();
+  openModal(`
+    <h3>Password · ${esc(u.name)}</h3>
+    <p class="modal-sub">${email ? `Login: ${esc(email)}` : "This account has no saved email, so reset email is unavailable."}</p>
+    <div class="card-box">
+      <div class="box-title">Option 1 — send reset email</div>
+      <p class="modal-sub">Firebase sends a secure reset link to the user's email. The current password keeps working until they complete it.</p>
+      <button type="button" class="btn btn-ghost btn-sm" data-pw-email ${email ? "" : "disabled"}>Send reset email</button>
+    </div>
+    <div class="card-box">
+      <div class="box-title">Option 2 — set a new password directly</div>
+      <p class="modal-sub">Instantly replaces the password. Requires the password Cloud Function to be deployed.</p>
+      <form id="directPasswordForm">
+        <label>New temporary password<input name="password" type="password" minlength="6" required autocomplete="new-password" placeholder="min 6 characters"></label>
+        <p class="modal-sub">Share this password with the user privately.</p>
+        <button type="submit" class="btn btn-danger btn-sm">Set new password</button>
+      </form>
+    </div>
+    <p id="passwordActionError" class="form-error" hidden></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close>Close</button>
+    </div>`);
+
+  const showError = (err) => {
+    const el = $("passwordActionError");
+    el.textContent = authError(err && err.code ? err.code : err);
+    el.hidden = false;
+  };
+
+  const emailBtn = $("modalBox").querySelector('[data-pw-email]');
+  if (emailBtn) {
+    emailBtn.addEventListener("click", async () => {
+      emailBtn.disabled = true;
+      try {
+        await sendPasswordResetEmail(auth, email);
+        closeModal();
+        toast("Password reset email sent to " + email + ".");
+      } catch (err) {
+        showError(err);
+        emailBtn.disabled = false;
+      }
+    });
+  }
+
+  $("directPasswordForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const btn = f.querySelector('button[type="submit"]');
+    $("passwordActionError").hidden = true;
+    const password = f.password.value;
+    if (password.length < 6) {
+      showError({ code: "auth/weak-password" });
+      return;
+    }
+    if (!confirm("Replace " + u.name + "'s password with the new one now?")) return;
+    btn.disabled = true;
+    try {
+      const setUserPassword = httpsCallable(functionsClient, "setUserPassword");
+      await setUserPassword({ uid: u.id, password });
+      closeModal();
+      toast("Password updated for " + u.name + ".");
+    } catch (err) {
+      showError(err);
+      btn.disabled = false;
+    }
+  });
+}
 
 $("newUserBtn").addEventListener("click", openUserForm);
 
@@ -1423,7 +1542,7 @@ function openJobDetail(id) {
       <button type="button" class="btn btn-primary btn-sm" data-act="invoice" ${canInvoice ? "" : "disabled"}>${job.invoice ? "View invoice" : "Generate digital invoice"}</button>
       ${job.payment && !job.payment.paid && canInvoice ? `<button type="button" class="btn btn-ghost btn-sm" data-act="payment">Record payment</button>` : ""}
       ${office ? `<button type="button" class="btn btn-ghost btn-sm" data-act="edit-job">Edit job</button>` : ""}
-      ${office ? `<button type="button" class="btn btn-danger btn-sm" data-act="delete-job">Delete</button>` : ""}
+      ${isMaster() ? `<button type="button" class="btn btn-danger btn-sm" data-act="delete-job">Delete permanently</button>` : ""}
     </div>
   `);
 
@@ -1595,6 +1714,7 @@ function paymentModal(job) {
 }
 
 async function deleteJob(job) {
+  if (!isMaster()) return toast("Only the master admin can delete jobs.", true);
   if (!confirm(`Delete "${job.title}"? This cannot be undone.`)) return;
   try {
     await deleteDoc(doc(db, "jobs", job.id));

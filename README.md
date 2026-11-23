@@ -42,6 +42,25 @@ A real multi-device web app. Office staff get full schedule control; technicians
    - Secret: paste the entire JSON file contents
 3. Push any change to `firestore.rules` — rules deploy automatically.
 
+The same secret is used by `.github/workflows/deploy-functions.yml`.
+
+### Getting the password function live
+
+The **Set new password directly** option uses the `setUserPassword` callable Cloud Function in `functions/`.
+
+1. Upgrade the Firebase project to the **Blaze plan** (required for Cloud Functions).
+2. Ensure the `FIREBASE_SERVICE_ACCOUNT` GitHub secret is set as above.
+3. Push a change under `functions/` — the function deploys automatically.
+
+Manual deploy:
+
+```bash
+cd functions
+npm install
+cd ..
+firebase deploy --only functions
+```
+
 ### First run — master login
 
 Open `app.html`. If no accounts exist, create the master admin account. From there:
@@ -108,7 +127,7 @@ python3 -m http.server 8080
 ## Deploy to Firebase
 
 ```bash
-firebase deploy --only hosting,firestore:rules
+firebase deploy --only hosting,firestore:rules,functions
 ```
 
 ## Regenerating images
