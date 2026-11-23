@@ -35,7 +35,8 @@ import {
   onSnapshot,
   query,
   where,
-  runTransaction
+  runTransaction,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   initializeAppCheck,
@@ -69,6 +70,7 @@ let app, auth, db, secondaryApp, secondaryAuth;
 let me = null;
 let users = {};
 let jobs = [];
+let webBookings = [];
 let unsubs = [];
 let activeView = "schedule";
 let scheduleDate = todayStr();
@@ -227,6 +229,7 @@ function showAuthScreen() {
   me = null;
   users = {};
   jobs = [];
+  webBookings = [];
   $("appShell").hidden = true;
   $("authScreen").hidden = false;
   $("setupForm").hidden = true;
@@ -364,6 +367,27 @@ function enterApp() {
       snap.docs.forEach((d) => { users[d.id] = { id: d.id, ...d.data() }; });
       renderActiveView();
     }));
+
+    let prevWebBookings = {};
+    let firstWebBookingsSnapshot = true;
+    unsubs.push(onSnapshot(collection(db, "webBookings"), (snap) => {
+      const incoming = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (!firstWebBookingsSnapshot) {
+        for (const b of incoming) {
+          if (!prevWebBookings[b.id] && b.status === "pending") {
+            playNotifySound();
+            toast("New website booking: " + (b.name || b.id));
+            break;
+          }
+        }
+      }
+      firstWebBookingsSnapshot = false;
+      prevWebBookings = {};
+      incoming.forEach((b) => { prevWebBookings[b.id] = b; });
+      webBookings = incoming;
+      buildTabs();
+      renderActiveView();
+    }, (err) => toast(err.message, true)));
   }
 
   buildTabs();
@@ -371,8 +395,9 @@ function enterApp() {
 }
 
 function buildTabs() {
+  const pendingCount = webBookings.filter((b) => b.status === "pending").length;
   const tabs = isOffice()
-    ? [["schedule", "Schedule"], ["alljobs", "All jobs"], ["invoices", "Invoices"], ["team", "Team & logins"]]
+    ? [["schedule", "Schedule"], ["alljobs", "All jobs"], ["webbookings", "Web bookings" + (pendingCount ? " (" + pendingCount + ")" : "")], ["invoices", "Invoices"], ["team", "Team & logins"]]
     : [["myjobs", "My jobs"], ["invoices", "Invoices"]];
   $("tabs").innerHTML = tabs
     .map(([id, label]) => `<button type="button" class="tab${activeView === id ? " active" : ""}" data-view="${id}">${label}</button>`)
@@ -396,6 +421,7 @@ function renderActiveView() {
   ({
     schedule: renderSchedule,
     alljobs: renderAllJobs,
+    webbookings: renderWebBookings,
     myjobs: renderMyJobs,
     team: renderTeam,
     invoices: renderInvoices
@@ -734,6 +760,187 @@ function renderMyJobs() {
         `<h3 style="font-size:.85rem;color:var(--muted);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.07em">${label}</h3><div class="job-list">${list.map(jobCard).join("")}</div>`
       ).join("")
     : `<div class="empty">No jobs assigned to you yet.<br>Your office assigns jobs from their dashboard — they appear here instantly.</div>`;
+}
+
+function webBookingTime(b) {
+  const ts = b.createdAt && typeof b.createdAt.toDate === "function" ? b.createdAt.toDate() : b.createdAt;
+  return fmtDateTime(ts);
+}
+
+function renderWebBookings() {
+  if (!isOffice()) return;
+  const rank = { pending: 0, confirmed: 1, declined: 2 };
+  const stamp = (b) => (b.createdAt && typeof b.createdAt.toDate === "function" ? b.createdAt.toDate().getTime() : Number(b.createdAt) || 0);
+  const list = [...webBookings].sort((a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3) || stamp(b) - stamp(a));
+  const pending = webBookings.filter((b) => b.status === "pending").length;
+  $("webBookingsCount").textContent = pending + " awaiting confirmation · " + webBookings.length + " total";
+  $("webBookingsList").innerHTML = list.length
+    ? list.map((b) => `
+      <article class="job-card" data-web-booking="${esc(b.id)}" tabindex="0" role="button" aria-label="Open website booking from ${esc(b.name || "customer")}">
+        <span class="job-time">${esc(webBookingTime(b))}</span>
+        <div class="job-main">
+          <p class="job-title">${esc(b.service || "Website enquiry")} · ${esc(b.name || "—")}</p>
+          <p class="job-meta">${esc(b.phone || "")}${b.area ? " · " + esc(b.area) : ""}</p>
+          <p class="job-meta">${b.message ? esc(b.message.length > 90 ? b.message.slice(0, 90) + "…" : b.message) : "No extra details"}</p>
+        </div>
+        <div class="job-side">
+          <span class="pill ${b.status === "pending" ? "amber" : b.status === "confirmed" ? "green" : "gray"}">${esc(b.status || "pending")}</span>
+        </div>
+      </article>`).join("")
+    : `<div class="empty">No website bookings yet.<br>Requests submitted on the Zaza website appear here for confirmation and assignment.</div>`;
+}
+
+["webBookingsList"].forEach((id) => {
+  $(id).addEventListener("click", (e) => {
+    const card = e.target.closest("[data-web-booking]");
+    if (card) openWebBooking(card.dataset.webBooking);
+  });
+  $(id).addEventListener("keydown", (e) => {
+    const card = e.target.closest("[data-web-booking]");
+    if (card && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      openWebBooking(card.dataset.webBooking);
+    }
+  });
+});
+
+function openWebBooking(id) {
+  const b = webBookings.find((x) => x.id === id);
+  if (!b || !isOffice()) return;
+  const pending = !b.status || b.status === "pending";
+  openModal(`
+    <div class="detail-head">
+      <div>
+        <h3>Website booking · ${esc(b.name || "customer")}</h3>
+        <p class="modal-sub">Submitted ${esc(webBookingTime(b))} · ${esc(b.status || "pending")}</p>
+      </div>
+      <button type="button" class="detail-close" data-close aria-label="Close">×</button>
+    </div>
+    <div class="meta-grid">
+      <div class="meta-cell"><small>Service</small><b>${esc(b.service || "—")}</b></div>
+      <div class="meta-cell"><small>Area</small><b>${esc(b.area || "—")}</b></div>
+      <div class="meta-cell"><small>Preferred date</small><b>${esc(b.preferredDate || "Flexible")}</b></div>
+      <div class="meta-cell"><small>Preferred time</small><b>${esc(b.preferredTime || "Flexible")}</b></div>
+    </div>
+    <div class="card-box">
+      <div class="box-title">Customer</div>
+      <div class="cust-line"><span>👤 <b>${esc(b.name || "—")}</b></span></div>
+      ${b.phone ? `<div class="cust-line">📞 <a href="tel:${esc(b.phone)}">${esc(b.phone)}</a></div>` : ""}
+      <div class="cust-line">📍 ${esc(b.area || "—")}</div>
+    </div>
+    ${b.message ? `<div class="card-box"><div class="box-title">Request details</div><p style="font-size:.88rem;color:var(--muted);line-height:1.55;white-space:pre-wrap">${esc(b.message)}</p></div>` : ""}
+    ${pending
+      ? `<div class="action-row">
+          <button type="button" class="btn btn-primary btn-sm" data-wb-act="confirm">Confirm &amp; assign</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-wb-act="decline">Decline</button>
+          <button type="button" class="btn btn-danger btn-sm" data-wb-act="delete">Delete</button>
+        </div>`
+      : `<p class="modal-sub">${b.jobId ? "Confirmed and dispatched as a job." : "This request has been closed."}</p>`}`);
+
+  const on = (sel, fn) => {
+    const el = $("modalBox").querySelector(sel);
+    if (el) el.addEventListener("click", fn);
+  };
+  on('[data-wb-act="confirm"]', () => openWebBookingConfirm(b));
+  on('[data-wb-act="decline"]', async () => {
+    if (!confirm("Decline this website booking?")) return;
+    try {
+      await updateDoc(doc(db, "webBookings", b.id), { status: "declined", handledBy: me.name, handledAt: Date.now() });
+      closeModal();
+      toast("Website booking declined.");
+    } catch (err) { toast(authError(err.code), true); }
+  });
+  on('[data-wb-act="delete"]', async () => {
+    if (!confirm("Permanently delete this website booking? This cannot be undone.")) return;
+    try {
+      await deleteDoc(doc(db, "webBookings", b.id));
+      closeModal();
+      toast("Website booking deleted.");
+    } catch (err) { toast(authError(err.code), true); }
+  });
+}
+
+function openWebBookingConfirm(b) {
+  const techs = Object.values(users).filter((u) => !u.isAdmin && u.active !== false && u.role !== "office");
+  if (!techs.length) return toast("Create a technician login first, then assign the booking.", true);
+  openModal(`
+    <h3>Confirm &amp; assign booking</h3>
+    <p class="modal-sub">A job is created and appears instantly on the technician's device.</p>
+    <form id="wbConfirmForm">
+      <div class="d-grid">
+        <label class="full">Job title<input name="title" required value="${esc((b.service || "Aircond service") + " · " + (b.name || "customer"))}"></label>
+        <label>Date<input type="date" name="date" required value="${esc(b.preferredDate || todayStr())}"></label>
+        <label>Time<input type="time" name="time" required value="${esc(b.preferredTime || "09:00")}"></label>
+        <label class="full">Assign to technician
+          <select name="assignedTo" required>
+            <option value="">— select technician —</option>
+            ${techs.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Service amount (optional)<input type="number" step="0.01" min="0" name="amount" placeholder="0.00"></label>
+        <label class="full">Notes<textarea name="notes" rows="3">${esc([b.area ? "Area: " + b.area : "", b.message ? "Request: " + b.message : ""].filter(Boolean).join("\n"))}</textarea></label>
+      </div>
+      <p id="wbConfirmError" class="form-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Confirm booking</button>
+      </div>
+    </form>`);
+  $("wbConfirmForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const errEl = $("wbConfirmError");
+    errEl.hidden = true;
+    const tech = users[f.assignedTo.value];
+    if (!tech) {
+      errEl.textContent = "Please choose a technician.";
+      errEl.hidden = false;
+      return;
+    }
+    const btn = f.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    const jobRef = doc(collection(db, "jobs"));
+    const amount = Number(f.amount.value) || 0;
+    const jobData = {
+      title: f.title.value.trim(),
+      date: f.date.value,
+      time: f.time.value,
+      status: "scheduled",
+      assignedTo: tech.id,
+      technicianName: tech.name,
+      assignedByName: me.name,
+      customer: { name: b.name || "", phone: b.phone || "", address: b.area || "" },
+      locationLink: "",
+      notes: f.notes.value.trim(),
+      services: amount > 0 ? [{ id: uid4(), desc: b.service || "Website booking", amount }] : [],
+      extras: [],
+      discount: null,
+      payment: { method: "", paid: false, paidAt: null },
+      invoice: null,
+      createdBy: me.id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      source: "website",
+      webBookingId: b.id
+    };
+    try {
+      const batch = writeBatch(db);
+      batch.set(jobRef, jobData);
+      batch.update(doc(db, "webBookings", b.id), {
+        status: "confirmed",
+        confirmedBy: me.name,
+        confirmedAt: Date.now(),
+        jobId: jobRef.id
+      });
+      await batch.commit();
+      closeModal();
+      toast("Booking confirmed and assigned to " + tech.name + ".");
+    } catch (err) {
+      errEl.textContent = authError(err.code);
+      errEl.hidden = false;
+    }
+    btn.disabled = false;
+  });
 }
 
 function renderTeam() {
