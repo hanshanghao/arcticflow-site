@@ -26,15 +26,15 @@ service cloud.firestore {
     function validWebBooking() {
       return request.resource.data.keys().hasAll(['name', 'phone', 'service', 'area', 'message', 'preferredDate', 'preferredTime', 'status', 'source', 'createdAt'])
         && request.resource.data.keys().hasOnly(['name', 'phone', 'service', 'area', 'message', 'preferredDate', 'preferredTime', 'status', 'source', 'createdAt'])
-        && request.resource.data.name.matches('(?s).*') && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 120
-        && request.resource.data.phone.matches('(?s).*') && request.resource.data.phone.size() >= 9 && request.resource.data.phone.size() <= 20
-        && request.resource.data['service'].matches('(?s).*') && request.resource.data['service'].size() >= 2 && request.resource.data['service'].size() <= 120
-        && request.resource.data.area.matches('(?s).*') && request.resource.data.area.size() >= 2 && request.resource.data.area.size() <= 120
-        && request.resource.data.message.matches('(?s).*') && request.resource.data.message.size() <= 2000
-        && request.resource.data.preferredDate.matches('(?s).*') && request.resource.data.preferredDate.size() <= 10
-        && request.resource.data.preferredTime.matches('(?s).*') && request.resource.data.preferredTime.size() <= 5
-        && request.resource.data.status == 'pending'
-        && request.resource.data.source == 'website'
+        && request.resource.data.get('name', '') is string
+        && request.resource.data.get('phone', '') is string
+        && request.resource.data.get('service', '') is string
+        && request.resource.data.get('area', '') is string
+        && request.resource.data.get('message', '') is string
+        && request.resource.data.get('preferredDate', '') is string
+        && request.resource.data.get('preferredTime', '') is string
+        && request.resource.data.get('status', '') == 'pending'
+        && request.resource.data.get('source', '') == 'website'
         && request.resource.data.createdAt == request.time;
     }
 
