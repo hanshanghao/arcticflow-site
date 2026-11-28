@@ -41,7 +41,14 @@ service cloud.firestore {
     match /settings/public {
       allow read: if true;
       allow create: if !exists(/databases/$(database)/documents/settings/public);
-      allow update, delete: if isOffice();
+      allow update: if isMaster();
+      allow delete: if false;
+    }
+
+    match /settings/{docId} {
+      allow read: if signedIn();
+      allow create, update: if isMaster();
+      allow delete: if false;
     }
 
     function bootstrapEra() {

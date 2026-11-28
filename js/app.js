@@ -56,6 +56,10 @@ const FIREBASE_CONFIG = {
 
 const PASSWORD_ENDPOINT = "https://zazaairconservices.com/api/arcticflow-set-password.php";
 const RECAPTCHA_SITE_KEY = "";
+const CONNECTED_BOOKING_FORMS = [
+  { source: "zaza", label: "Zaza", url: "https://zazaairconservices.com/contact/index.html" },
+  { source: "mozaz", label: "Mozaz", url: "https://mozazresources.my/contact-us/" }
+];
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -293,7 +297,7 @@ $("setupForm").addEventListener("submit", async (e) => {
       createdBy: "system",
       createdAt: Date.now()
     });
-    await setDoc(doc(db, "settings", "public"), { initialized: true }).catch(() => {});
+    await setDoc(doc(db, "settings", "public"), { initialized: true }, { merge: true }).catch(() => {});
   } catch (err) {
     if (err.code === "auth/email-already-in-use") {
       try {
@@ -310,7 +314,7 @@ $("setupForm").addEventListener("submit", async (e) => {
             createdAt: Date.now(),
             validUntil: Date.now() + (365 * 24 * 60 * 60 * 1000)
           });
-          await setDoc(doc(db, "settings", "public"), { initialized: true }).catch(() => {});
+          await setDoc(doc(db, "settings", "public"), { initialized: true }, { merge: true }).catch(() => {});
         }
       } catch (err2) {
         $("setupError").textContent = authError(err2.code || err.code);
@@ -831,9 +835,8 @@ function webBookingTime(b) {
 
 function sourceLabel(b) {
   const s = b.source || "website";
-  if (s === "zaza") return "Zaza";
-  if (s === "mozaz") return "Mozaz";
-  return "Website";
+  const form = CONNECTED_BOOKING_FORMS.find((f) => f.source === s);
+  return form ? form.label : "Website";
 }
 
 function sourcePillClass(b) {
@@ -879,7 +882,7 @@ function renderWebBookings() {
           ${b.temporarilyDeleted === true ? `<span class="pill rose">Removed</span>` : ""}
         </div>
       </article>`).join("")
-    : `<div class="empty">No ${esc(sourceLabel({ source: filter === "all" ? "website" : filter }))} bookings yet.<br>Requests submitted on the Zaza and Mozaz websites appear here for confirmation and assignment.</div>`;
+    : `<div class="empty">No ${esc(sourceLabel({ source: filter === "all" ? "website" : filter }))} bookings yet.<br>Requests from ${CONNECTED_BOOKING_FORMS.map((f) => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.label)}</a>`).join(" and ")} appear here for confirmation and assignment.</div>`;
 }
 
 const webSourceSelect = $("webBookingsSource");
